@@ -12,19 +12,31 @@ import nsc.transform.Transform
 class PurePlugin(val global: Global) extends Plugin {
   import global._
 
+  val whitelistPackages = Set(
+    "scala.collection.immutable")
+  val whilelistObjects = Set(
+    "java.lang.Object", "java.lang.String", "java.lang.Integer", "java.lang.Long",
+    "scala", "scala.ScalaObject", "scala.AnyRef", "scala.Ref",
+    "scala.Int", "scala.Long")
+
   val name = "pure"
   val description = "Enforces pureness"
   val components = List[PluginComponent](AnnotatePureComponent, CheckPurityComponent)
 
   val annotPure = definitions.getClass("pusca.pure")
   val annotImpure = definitions.getClass("pusca.impure")
+  val annotDeclarePure = definitions.getClass("pusca.declareAsPure")
 
   val unitT = definitions.getClass("scala.Unit")
   val nothingT = definitions.getClass("scala.Nothing")
 
   private def isDeclaredImpure(symbol: Symbol) = {
-    //    log("# annotations on " + d.symbol.name + ": " + d.symbol.annotations)
     symbol.annotations.find(_.atp.typeSymbol == annotImpure).isDefined
+  }
+  private def onlyPureContentAllowed(symbol: Symbol) = {
+    symbol.annotations.find { a =>
+      a.atp.typeSymbol == annotImpure || a.atp.typeSymbol == annotDeclarePure
+    }.isEmpty
   }
   private def isInvalidReturnType(symbol: Symbol) = {
     symbol == unitT || symbol == nothingT
@@ -49,14 +61,14 @@ class PurePlugin(val global: Global) extends Plugin {
           if (!isDeclaredImpure(c.symbol)) {
             log("# annotating class " + c.symbol.fullName + " as pure")
             annotatePure(c.symbol)
-          }
-          super.transform(t)
+            super.transform(t)
+          } else c
         case d: DefDef =>
           if (!isDeclaredImpure(d.symbol)) {
             log("# annotating function " + d.symbol.fullName + " as pure")
             annotatePure(d.symbol)
-          }
-          super.transform(t)
+            super.transform(t)
+          } else d
         case o => super.transform(t)
       }
       def annotatePure(on: Symbol): Unit = {
@@ -78,6 +90,8 @@ class PurePlugin(val global: Global) extends Plugin {
     class CheckPurityPhase(prev: Phase) extends StdPhase(prev) {
       override def name = "checkPurity"
 
+      //TODO also check for 'lost' assignments (warn), because they don't make sense in a pure function
+
       def apply(unit: CompilationUnit) {
         def checkPurity(inDef: Boolean)(e: Tree): Unit = e match {
           case t: Template =>
@@ -90,7 +104,7 @@ class PurePlugin(val global: Global) extends Plugin {
           case d: DefDef =>
             if (isDeclaredImpure(d.symbol))
               unit.error(d.pos, "A pure class must not have impure members")
-            else {
+            else if (onlyPureContentAllowed(d.symbol)) {
               log("# asserting purity of def " + d.name)
               d.children.foreach(checkPurity(true) _)
             }
@@ -98,10 +112,12 @@ class PurePlugin(val global: Global) extends Plugin {
             log("# asserting purity of val " + v.name)
             if (isDeclaredImpure(v.symbol))
               unit.error(v.pos, "A pure class must not have impure members")
-            else if ((v.symbol.flags & Flags.MUTABLE) != 0) //TODO allow them in defs?
-              unit.error(v.pos, "No vars allowed in pure classes") //TODO really? or only no access to them in pure methods
-            else
-              v.children.foreach(checkPurity(true) _)
+            else if (onlyPureContentAllowed(v.symbol)) {
+              if ((v.symbol.flags & Flags.MUTABLE) != 0) //TODO allow them in defs?
+                unit.error(v.pos, "No vars allowed in pure classes") //TODO really? or only no access to them in pure methods
+              else
+                v.children.foreach(checkPurity(true) _)
+            }
 
           case i: Ident =>
             def findSuperOf(s: Symbol): Symbol = s match {
@@ -130,7 +146,8 @@ class PurePlugin(val global: Global) extends Plugin {
           case c: ClassDef =>
             if (isDeclaredImpure(c.symbol))
               unit.error(c.pos, "Cannot defined impure classes inside a pure one")
-            else c.children.foreach(checkPurity(false) _)
+            else if (onlyPureContentAllowed(c.symbol))
+              c.children.foreach(checkPurity(false) _)
 
           case o =>
             o.children.foreach(checkPurity(inDef) _)
@@ -139,7 +156,7 @@ class PurePlugin(val global: Global) extends Plugin {
 
         def checkPurityTop(e: Tree): Unit = e match {
           case c: ClassDef =>
-            if (!isDeclaredImpure(c.symbol)) {
+            if (onlyPureContentAllowed(c.symbol)) {
               log("# asserting purity of class " + c.name)
               checkPurity(false)(c)
             }
@@ -149,16 +166,9 @@ class PurePlugin(val global: Global) extends Plugin {
         }
 
         checkPurityTop(unit.body)
-        
-//        global.treeBrowsers.create().browse(unit.body)
-      }
 
-      val whitelistPackages = Set(
-        "scala.collection.immutable")
-      val whilelistObjects = Set(
-        "java.lang.Object", "java.lang.String", "java.lang.Integer", "java.lang.Long",
-        "scala", "scala.ScalaObject", "scala.AnyRef", "scala.Ref",
-        "scala.Int", "scala.Long")
+        //        global.treeBrowsers.create().browse(unit.body)
+      }
 
       def isPure(t: Symbol): Boolean = {
         t match {

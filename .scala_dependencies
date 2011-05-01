@@ -8,6 +8,7 @@
 /Users/ms/scala/eclipse-workspace/pusca/src/main/scala/pusca/plugin/PurePlugin.scala -> /Users/ms/scala/eclipse-workspace/pusca/bin/pusca/plugin/PurePlugin.class
 /Users/ms/scala/eclipse-workspace/pusca/src/main/scala/pusca/plugin/PurePlugin.scala -> /Users/ms/scala/eclipse-workspace/pusca/bin/pusca/plugin/PurePlugin$CheckPurityComponent$CheckPurityPhase$$anonfun$checkPurity$1$1.class
 /Users/ms/scala/eclipse-workspace/pusca/src/main/scala/pusca/plugin/PurePlugin.scala -> /Users/ms/scala/eclipse-workspace/pusca/bin/pusca/plugin/PurePlugin$CheckPurityComponent$CheckPurityPhase$$anonfun$checkPurity$1$8.class
+/Users/ms/scala/eclipse-workspace/pusca/src/main/scala/pusca/plugin/PurePlugin.scala -> /Users/ms/scala/eclipse-workspace/pusca/bin/pusca/plugin/PurePlugin$$anonfun$pusca$plugin$PurePlugin$$onlyPureContentAllowed$1.class
 /Users/ms/scala/eclipse-workspace/pusca/src/main/scala/pusca/plugin/PurePlugin.scala -> /Users/ms/scala/eclipse-workspace/pusca/bin/pusca/plugin/PurePlugin$CheckPurityComponent$CheckPurityPhase$$anonfun$checkPurity$1$2.class
 /Users/ms/scala/eclipse-workspace/pusca/src/main/scala/pusca/plugin/PurePlugin.scala -> /Users/ms/scala/eclipse-workspace/pusca/bin/pusca/plugin/PurePlugin$CheckPurityComponent$CheckPurityPhase$$anonfun$checkPurity$1$4.class
 /Users/ms/scala/eclipse-workspace/pusca/src/main/scala/pusca/plugin/PurePlugin.scala -> /Users/ms/scala/eclipse-workspace/pusca/bin/pusca/plugin/PurePlugin$CheckPurityComponent$CheckPurityPhase$$anonfun$checkPurity$1$6.class
@@ -21,5 +22,6 @@
 /Users/ms/scala/eclipse-workspace/pusca/src/main/scala/pusca/plugin/PurePlugin.scala -> /Users/ms/scala/eclipse-workspace/pusca/bin/pusca/plugin/PurePlugin$CheckPurityComponent$CheckPurityPhase$$anonfun$checkPurity$1$5.class
 /Users/ms/scala/eclipse-workspace/pusca/src/main/scala/pusca/plugin/PurePlugin.scala -> /Users/ms/scala/eclipse-workspace/pusca/bin/pusca/plugin/PurePlugin$CheckPurityComponent$CheckPurityPhase$$anonfun$checkPurity$1$7.class
 /Users/ms/scala/eclipse-workspace/pusca/src/main/scala/pusca/plugin/PurePlugin.scala -> /Users/ms/scala/eclipse-workspace/pusca/bin/pusca/plugin/PurePlugin$CheckPurityComponent$CheckPurityPhase$$anonfun$2.class
+/Users/ms/scala/eclipse-workspace/pusca/src/main/scala/pusca/declareAsPure.scala -> /Users/ms/scala/eclipse-workspace/pusca/bin/pusca/declareAsPure.class
 /Users/ms/scala/eclipse-workspace/pusca/src/main/scala/pusca/pure.scala -> /Users/ms/scala/eclipse-workspace/pusca/bin/pusca/pure.class
 /Users/ms/scala/eclipse-workspace/pusca/src/main/scala/pusca/impure.scala -> /Users/ms/scala/eclipse-workspace/pusca/bin/pusca/impure.class
