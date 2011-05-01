@@ -1,0 +1,4 @@
+<plugin>
+  <name>pure</name>
+  <classname>pusca.plugin.PurePlugin</classname>
+</plugin>
