@@ -6,9 +6,9 @@ trait PureDefinitions {
   val global: Global
   import global._
 
-  protected def log(s: String) = {
+//  protected def log(s: String) = {
 //    println(s)
-  }
+//  }
 
   protected def isDeclaredImpure(symbol: Symbol) = {
     symbol.annotations.find(_.atp.typeSymbol == Annotation.impure).isDefined

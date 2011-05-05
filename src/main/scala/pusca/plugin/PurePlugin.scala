@@ -11,8 +11,9 @@ class PurePlugin(val global: Global) extends Plugin {
   val description = "Enforces pureness"
   val components = List[PluginComponent]( //
     new AnnotatePureComponent(global), //
-//    ShowTreeComponent, //
-    new CheckPurityComponent(global))
+    //    ShowTreeComponent, //
+    new CheckPurityComponent(global),
+    new WarnLostAssignments(global))
 
   import global._
   private object ShowTreeComponent extends PluginComponent {

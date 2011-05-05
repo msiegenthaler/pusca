@@ -16,7 +16,7 @@ class CheckPurityComponent(val global: Global) extends PluginComponent with Pure
   def newPhase(_prev: Phase) = new CheckPurityPhase(_prev)
 
   class CheckPurityPhase(prev: Phase) extends StdPhase(prev) {
-    override def name = "checkPurity"
+    override def name = phaseName
 
     //TODO also check for 'lost' assignments (warn), because they don't make sense in a pure function
 
