@@ -1,0 +1,21 @@
+Pure functions (@pure) may not
+- call impure functions
+- assign to var's defined outside the function
+- read a var defined outside the function
+- be overriden by an impure function
+- perform IO/change the world
+
+
+Remarks: <init> is considered a normal function
+
+Pure is the default for methods, every method not marked @impure is considered pure and the constraints are checked, yielding
+compiler errors when violated. 
+
+@declarePure can be used to declare impure methods to be pure after all. I.e. if they use impure implementations details but
+are referential transparent. 
+
+
+TODO impure-functions as parameters for pure functions?
+
+
+see also http://jnordenberg.blogspot.com/2008/10/functional-purity-in-scala.html

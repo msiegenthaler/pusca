@@ -6,4 +6,4 @@ package pusca
  * It's appropriate to use this annotation on code that guarantees referential transparency but relies 
  * on not-pure implementation details such as spawning multiple threads to parallelize the execution.
  */
-class declareAsPure extends StaticAnnotation
+class declarePure extends StaticAnnotation

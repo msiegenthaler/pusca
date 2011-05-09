@@ -18,8 +18,6 @@ class CheckPurityComponent(val global: Global) extends PluginComponent with Pure
   class CheckPurityPhase(prev: Phase) extends StdPhase(prev) {
     override def name = phaseName
 
-    //TODO also check for 'lost' assignments (warn), because they don't make sense in a pure function
-
     def apply(unit: CompilationUnit) {
       def checkPurity(inDef: Boolean)(e: Tree): Unit = e match {
         case t: Template =>
