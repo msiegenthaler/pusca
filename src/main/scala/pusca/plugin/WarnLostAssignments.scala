@@ -30,8 +30,9 @@ class WarnLostAssignments(val global: Global) extends PluginComponent with PureD
         case c: ClassDef =>
           if (onlyPureContentAllowed(c.symbol)) checkPure(c.impl)
           else t.children.foreach(check _)
+        case t: Template =>
+          t.body.foreach(check _)
         case d: DefDef =>
-          // log("# def with " + d.rhs)
           if (onlyPureContentAllowed(d.symbol)) checkPure(d.rhs)
           else t.children.foreach(check _)
         case v: ValDef =>
@@ -39,8 +40,7 @@ class WarnLostAssignments(val global: Global) extends PluginComponent with PureD
         case p: PackageDef =>
           p.stats.foreach(check _)
         case other =>
-          log("Unexpected tree in check " + other.getClass + " (" + other + ")")
-          ()
+          other.children.foreach(check _)
       }
 
       def checkPure(t: Tree): Unit = {

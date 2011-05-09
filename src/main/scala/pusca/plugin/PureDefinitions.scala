@@ -10,15 +10,6 @@ trait PureDefinitions {
 //    println(s)
   }
 
-  protected def isDeclaredImpure(symbol: Symbol) = {
-    symbol.annotations.find(_.atp.typeSymbol == Annotation.impure).isDefined
-  }
-  protected def onlyPureContentAllowed(symbol: Symbol) = {
-    symbol.annotations.find { a =>
-      a.atp.typeSymbol == Annotation.impure || a.atp.typeSymbol == Annotation.declarePure
-    }.isEmpty
-  }
-
   object PureFunction {
     def unapply(t: Tree) = t match {
       case d: DefDef if isPure(d.symbol) =>
@@ -43,6 +34,11 @@ trait PureDefinitions {
   def isPure(s: Symbol) = s.annotations.find(_.atp.typeSymbol == Annotation.pure).isDefined
   def isImpure(s: Symbol) = s.annotations.find(_.atp.typeSymbol == Annotation.impure).isDefined
   def isDeclaredPure(s: Symbol) = s.annotations.find(_.atp.typeSymbol == Annotation.declarePure).isDefined
+  def onlyPureContentAllowed(symbol: Symbol) = {
+    symbol.annotations.find { a =>
+      a.atp.typeSymbol == Annotation.impure || a.atp.typeSymbol == Annotation.declarePure
+    }.isEmpty
+  }
 
   private def packageOfSymbol(s: Symbol): Symbol = s match {
     case NoSymbol => NoSymbol

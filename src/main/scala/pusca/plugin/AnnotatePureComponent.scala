@@ -33,7 +33,7 @@ class AnnotatePureComponent(val global: Global) extends PluginComponent with Pur
         log("annotating var accessor " + ac.symbol.fullName + " as impure")
         annotateImpure(ac.symbol)
         super.transform(ac)
-      case d: DefDef if isDeclaredImpure(d.symbol) =>
+      case d: DefDef if isImpure(d.symbol) =>
         super.transform(t)
       case d: DefDef if d.symbol.isConstructor =>
         val impure = d.symbol.ownerChain.find(_.isClass).map(isImpure _).getOrElse(false)
@@ -49,14 +49,14 @@ class AnnotatePureComponent(val global: Global) extends PluginComponent with Pur
         log("annotating def " + d.symbol.fullName + " as pure")
         annotatePure(d.symbol)
         super.transform(t)
-      case f: Function if isDeclaredImpure(f.symbol) =>
+      case f: Function if isImpure(f.symbol) =>
         super.transform(t)
       case f: Function =>
         log("annotating function " + f.symbol.fullName + " as pure")
         annotatePure(f.symbol)
         super.transform(t)
 
-      case c: ClassDef if !isDeclaredImpure(c.symbol) =>
+      case c: ClassDef if !isImpure(c.symbol) =>
         val impure = c.impl match {
           case t: Template if t.parents.map(_.symbol).find(s => !satisfiesPureness(s)).isDefined =>
             //if a class has an impure parent it's considered impure as well
