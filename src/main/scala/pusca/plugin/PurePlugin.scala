@@ -10,6 +10,7 @@ class PurePlugin(val global: Global) extends Plugin {
   val name = "pure"
   val description = "Enforces pureness"
   val components = List[PluginComponent]( //
+    new RewriteImpureFunctionsComponent(global), //
     new AnnotatePureComponent(global), //
     ShowTreeComponent, //
     new CheckPurityComponent(global),

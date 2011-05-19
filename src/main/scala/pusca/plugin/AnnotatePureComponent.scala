@@ -9,7 +9,7 @@ import nsc.symtab.Flags
 class AnnotatePureComponent(val global: Global) extends PluginComponent with PureDefinitions with Transform {
   import global._
 
-  val runsAfter = List("uncurry")
+  val runsAfter = List("uncurry", "rewriteImpureFunctions")
   val phaseName = "annotatePure"
   def newTransformer(unit: global.CompilationUnit) = {
     new AnnotatePurityTransformer
