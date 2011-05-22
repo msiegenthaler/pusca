@@ -39,11 +39,20 @@ class RewriteImpureFunctionsComponent(val global: Global) extends PluginComponen
             } else p
           }
           annotateImpure(f.symbol) //apply is now impure
-          val ni = impl.copy(parents = np)
-          val nc = c.copy(impl = ni)
+          val nimpl = impl.copy(parents = np)
+          copyAttrs(impl, nimpl)
+          val nc = c.copy(impl = nimpl)
+          copyAttrs(c, nc)
           nc
         }
       case o => super.transform(t)
+    }
+
+    private def copyAttrs(from: Tree, to: Tree) = {
+      to.pos = from.pos
+      to.tpe = from.tpe
+      if (from.hasSymbol)
+        to.symbol = from.symbol
     }
   }
 
