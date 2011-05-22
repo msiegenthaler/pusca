@@ -53,21 +53,6 @@ class CheckPurityComponent(val global: Global) extends PluginComponent with Pure
             unit.error(t.pos, "Pure function " + enclosingFun.fullName + " contains assignment to non-enclosed var " + a.lhs.symbol.fullName)
           else a.rhs.foreach(checkPure(enclosingFun))
 
-        //TODO maybe better to check that in NoAssignmentsFromImpureToPureComponent
-        case FunctionValDef(v) =>
-          v.tpt.tpe match {
-            case TypeRef(pre, sym, args) =>
-              if (!args.find(_.annotations.find(_.atp.typeSymbol == Annotation.impure).isDefined).isDefined) {
-                //Left is pure
-                v.rhs.tpe match {
-                  case TypeRef(pre, sym, args) =>
-                    if (args.find(_.annotations.find(_.atp.typeSymbol == Annotation.impure).isDefined).isDefined)
-                      unit.error(t.pos, "Cannot assign a pure function to an impure one")
-                }
-              } else ()
-            case _ => ()
-          }
-
         case d: DefDef =>
           process(d)
         case o =>

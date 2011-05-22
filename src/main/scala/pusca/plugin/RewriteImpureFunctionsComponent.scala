@@ -15,9 +15,6 @@ class RewriteImpureFunctionsComponent(val global: Global) extends PluginComponen
     new AnnotatePurityTransformer
   }
 
-  //TODO
-  protected override def log(s: => String) = println(s)
-
   class AnnotatePurityTransformer extends Transformer {
     override def transform(t: Tree) = t match {
       case AnonFunction(c, impl, f) =>
@@ -73,10 +70,6 @@ class RewriteImpureFunctionsComponent(val global: Global) extends PluginComponen
         to.symbol = from.symbol
     }
   }
-
-  //TODO
-//  private val impureFunctions = (0 to 2).map(i => definitions.getClass("pusca.ImpureFunction" + i))
-  private val abstractFunctions = (0 to 22).map(i => definitions.getClass("scala.runtime.AbstractFunction" + i))
 
   object AnonFunction {
     def unapply(t: Tree) = t match {

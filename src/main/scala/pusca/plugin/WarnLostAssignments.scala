@@ -73,20 +73,6 @@ class WarnLostAssignments(val global: Global) extends PluginComponent with PureD
         }
       }
 
-      object SuperInit {
-        def unapply(t: Tree) = t match {
-          case a: Apply => a.fun match {
-            case Select(q, n: TermName) if n.toString == "<init>" => q.children match {
-              case (th: This) :: _ =>
-                Some(t)
-              case _ => None
-            }
-            case _ => None
-          }
-          case _ => None
-        }
-      }
-
       def checkLost(t: Tree): Unit = {
         log("# Checking lost " + t.getClass + " (" + t.tpe.typeSymbol.fullName + ")")
         t match {

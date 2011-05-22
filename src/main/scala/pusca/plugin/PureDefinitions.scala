@@ -74,6 +74,20 @@ trait PureDefinitions {
   }
 
   val abstractFunctions = (0 to 22).map(i => definitions.getClass("scala.runtime.AbstractFunction" + i))
+  
+  object SuperInit {
+    def unapply(t: Tree) = t match {
+      case a: Apply => a.fun match {
+        case Select(q, n: TermName) if n.toString == "<init>" => q.children match {
+          case (th: This) :: _ =>
+            Some(t)
+          case _ => None
+        }
+        case _ => None
+      }
+      case _ => None
+    }
+  }
 
   def isVarAccessor(s: Symbol): Boolean = {
     s.isSetter || (s.isGetter && !s.isStable)

@@ -60,10 +60,10 @@ object PurityHigherLevel {
   }
 
   //Wrapping
-  def referenceToImpure = sum _
-  def wrapImpure1 = () => sum(10, 15)
-  def wrapImpure2 = (a: Int) => sum(10, a)
-  def wrapImpure3: Int => Int @impure = sum(_, 15)
+  def referenceToImpure = impureSum _
+  def wrapImpure1 = () => impureSum(10, 15)
+  def wrapImpure2 = (a: Int) => impureSum(10, a)
+  def wrapImpure3: Int => Int @impure = impureSum(_, 15)
   def callWrapped = {
     val x: Int = wrapImpure1() //error 7
     wrapImpure2(10) //error 8
@@ -75,15 +75,25 @@ object PurityHigherLevel {
     val fa: String => Unit = f //error 9
     fa("Hi")
   }
+  def impureToPure2(f: String => Unit @impure) = {
+    val fa = new Function1[String, Unit] {
+      override def apply(a: String) = f(a) //error 10
+    }
+    fa("Hi")
+  }
   
+  //execution of local impure
+  def impureToImpure(f: String => Unit @impure) = {
+    val fa: String => Unit @impure = f
+    fa("Hi") //error 11 (last)
+  }
+
   //casting impure to pure
   def castImpureToPure(f: String => Unit @impure) = {
     val fa: String => Unit = f.asInstanceOf[String => Unit] //class cast exception
     fa("Hi")
   }
-  
+
   //assigning pure to impure
   def pureToImpure(f: String => Int): String => Int @impure = f
-
-  1
 }
