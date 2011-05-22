@@ -29,15 +29,16 @@ class RewriteImpureFunctionsComponent(val global: Global) extends PluginComponen
           log("Anonymous function in " + c.symbol.owner.fullName + " markes as impure ")
           log(" because of " + impures)
 
-          //Remove the AbstractFunctionX as the parent
+          //TODO necessary?
+          //Change extended class from Function[A,B] to Function[A,B @impure]
           val np = impl.parents.map { p =>
-            val i = abstractFunctions.indexOf(p.symbol)
-            if (i > -1) {
-              val TypeRef(pre, sym, params) = p.tpe
-              val nr = TypeRef(pre, impureFunctions(i), params)
-              TypeTree(nr)
-            } else p
+            if (abstractFunctions.contains(p.symbol)) annotateFunctionClassReturnType(p)
+            else p
           }
+          
+          //TODO necessary
+          annotateImpure(c.symbol) // class is now impure
+          
           annotateImpure(f.symbol) //apply is now impure
           val nimpl = impl.copy(parents = np)
           copyAttrs(impl, nimpl)
@@ -46,6 +47,23 @@ class RewriteImpureFunctionsComponent(val global: Global) extends PluginComponen
           nc
         }
       case o => super.transform(t)
+    }
+
+    private def annotateFunctionClassReturnType(p: Tree) = {
+      val TypeRef(pre, sym, params) = p.tpe
+      val rt = params.last
+      val nrt = rt match {
+        case AnnotatedType(annots, raw, s) =>
+          val nannots = AnnotationInfo(Annotation.impure.tpe, Nil, Nil) :: annots.filterNot(Annotation.purenessAnnotation)
+          AnnotatedType(nannots, raw, s)
+        case t =>
+          AnnotatedType(AnnotationInfo(Annotation.impure.tpe, Nil, Nil) :: Nil, t, NoSymbol)
+      }
+      val nparams = params.take(params.length - 1) ::: nrt :: Nil
+
+      val nr = TypeRef(pre, sym, nparams)
+      log("## impure anon-function: changed " + p.tpe + " to " + nr)
+      TypeTree(nr)
     }
 
     private def copyAttrs(from: Tree, to: Tree) = {

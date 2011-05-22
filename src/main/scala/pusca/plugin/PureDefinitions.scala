@@ -8,7 +8,7 @@ trait PureDefinitions {
   import global._
 
   protected def log(s: => String) = {
-    println(s)
+//    println(s)
   }
 
   object PureFunction {
