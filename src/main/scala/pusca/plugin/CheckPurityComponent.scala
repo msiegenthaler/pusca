@@ -19,9 +19,20 @@ class CheckPurityComponent(val global: Global) extends PluginComponent with Pure
 
     def apply(unit: CompilationUnit) {
 
+      def hasImpureResult(t: Tree) = {
+        val tpe = t.tpe
+        tpe match {
+          case MethodType(ss, AnnotatedType(as, _, _)) =>
+            as.find(_.atp.typeSymbol == Annotation.impure).isDefined
+          case _ => false
+        }
+      }
+
       def checkPure(enclosingFun: Symbol)(t: Tree): Unit = t match {
         case a: Apply =>
           if (!satisfiesPureness(a.fun.symbol))
+            unit.error(t.pos, "Impure function call to " + a.fun.symbol.fullName + " inside the pure function " + enclosingFun.fullName)
+          else if (hasImpureResult(a.fun))
             unit.error(t.pos, "Impure function call to " + a.fun.symbol.fullName + " inside the pure function " + enclosingFun.fullName)
           else a.args.foreach(checkPure(enclosingFun))
 
@@ -29,6 +40,8 @@ class CheckPurityComponent(val global: Global) extends PluginComponent with Pure
           if (!a.lhs.symbol.ownerChain.contains(enclosingFun))
             unit.error(t.pos, "Pure function " + enclosingFun.fullName + " contains assignment to non-enclosed var " + a.lhs.symbol.fullName)
           else a.rhs.foreach(checkPure(enclosingFun))
+
+        //TODO ValDef of Function from A => B to A => B @impure
 
         case d: DefDef =>
           process(d)
@@ -56,7 +69,7 @@ class CheckPurityComponent(val global: Global) extends PluginComponent with Pure
               unit.error(d.pos, "Impure function " + d.symbol.fullName + " cannot override pure functions " + pureOverrides.map(_.fullName).mkString(", "))
           } else
             process(rhs)
-          //TODO check if really impure and warn otherwise?
+        //TODO check if really impure and warn otherwise?
 
         case o => o.children.foreach(process _)
       }

@@ -74,7 +74,8 @@ class RewriteImpureFunctionsComponent(val global: Global) extends PluginComponen
     }
   }
 
-  private val impureFunctions = (0 to 2).map(i => definitions.getClass("pusca.ImpureFunction" + i))
+  //TODO
+//  private val impureFunctions = (0 to 2).map(i => definitions.getClass("pusca.ImpureFunction" + i))
   private val abstractFunctions = (0 to 22).map(i => definitions.getClass("scala.runtime.AbstractFunction" + i))
 
   object AnonFunction {

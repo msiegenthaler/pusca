@@ -13,7 +13,7 @@ class PurePlugin(val global: Global) extends Plugin {
     new RewriteImpureFunctionsComponent(global), //
     new AnnotatePureComponent(global), //
     ShowTreeComponent, //
-    //    new CheckPurityComponent(global),
+    new CheckPurityComponent(global),
     new WarnLostAssignments(global))
 
   import global._
