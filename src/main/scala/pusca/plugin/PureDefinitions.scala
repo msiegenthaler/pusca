@@ -8,7 +8,7 @@ trait PureDefinitions {
   import global._
 
   protected def log(s: => String) = {
-    //        println(s)
+    println(s)
   }
 
   object PureFunction {
@@ -84,20 +84,14 @@ trait PureDefinitions {
   }
 
   def annotatePure(on: Symbol): Unit = {
-    on.annotations.find(_.atp.typeSymbol == Annotation.pure) match {
-      case None =>
-        val a = AnnotationInfo(Annotation.pure.tpe, Nil, Nil)
-        on.setAnnotations(a :: on.annotations)
-      case Some(_) => ()
-    }
+    val a = AnnotationInfo(Annotation.pure.tpe, Nil, Nil)
+    val na = a :: on.annotations.filterNot(Annotation.purenessAnnotation)
+    on.setAnnotations(na)
   }
   def annotateImpure(on: Symbol): Unit = {
-    on.annotations.find(_.atp.typeSymbol == Annotation.impure) match {
-      case None =>
-        val a = AnnotationInfo(Annotation.impure.tpe, Nil, Nil)
-        on.setAnnotations(a :: on.annotations)
-      case Some(_) => ()
-    }
+    val a = AnnotationInfo(Annotation.impure.tpe, Nil, Nil)
+    val na = a :: on.annotations.filterNot(Annotation.purenessAnnotation)
+    on.setAnnotations(na)
   }
 
   /** Checks if the Tree is impure and returns all its impure content */
@@ -148,6 +142,10 @@ trait PureDefinitions {
     val pure = definitions.getClass("pusca.pure")
     val impure = definitions.getClass("pusca.impure")
     val declarePure = definitions.getClass("pusca.declarePure")
+    def purenessAnnotation(ai: AnnotationInfo) = {
+      val a = ai.atp.typeSymbol
+      a == pure || a == impure || a == declarePure
+    }
   }
 
   protected object Whitelist {
