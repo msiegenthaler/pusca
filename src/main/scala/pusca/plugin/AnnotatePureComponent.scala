@@ -8,7 +8,7 @@ import scala.tools.nsc
 class AnnotatePureComponent(val global: Global) extends PluginComponent with PureDefinitions with Transform {
   import global._
 
-  val runsAfter = List("uncurry", "rewriteImpureFunctions")
+  val runsAfter = List("uncurry")
   val phaseName = "annotatePure"
   def newTransformer(unit: global.CompilationUnit) = {
     new AnnotatePurityTransformer

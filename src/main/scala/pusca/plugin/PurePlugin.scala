@@ -12,7 +12,7 @@ class PurePlugin(val global: Global) extends Plugin {
   val components = List[PluginComponent]( //
     new RewriteImpureFunctionsComponent(global), //
     new AnnotatePureComponent(global), //
-    ShowTreeComponent, //
+//    ShowTreeComponent, //
     new CheckPurityComponent(global),
     new WarnLostAssignments(global))
 

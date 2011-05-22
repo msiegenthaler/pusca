@@ -9,7 +9,7 @@ import nsc.plugins.PluginComponent
 class CheckPurityComponent(val global: Global) extends PluginComponent with PureDefinitions {
   import global._
 
-  val runsAfter = List("uncurry", "annotatePure")
+  val runsAfter = List("uncurry", "annotatePure", "rewriteImpureFunctions")
   override val runsBefore = List("tailcalls")
   val phaseName = "checkPurity"
   def newPhase(_prev: Phase) = new CheckPurityPhase(_prev)
@@ -56,8 +56,7 @@ class CheckPurityComponent(val global: Global) extends PluginComponent with Pure
               unit.error(d.pos, "Impure function " + d.symbol.fullName + " cannot override pure functions " + pureOverrides.map(_.fullName).mkString(", "))
           } else
             process(rhs)
-
-        //TODO check if really impure and warn otherwise?
+          //TODO check if really impure and warn otherwise?
 
         case o => o.children.foreach(process _)
       }
