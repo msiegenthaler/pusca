@@ -57,21 +57,5 @@ class AnnotatePureComponent(val global: Global) extends PluginComponent with Pur
 
       case o => super.transform(t)
     }
-    def annotatePure(on: Symbol): Unit = {
-      on.annotations.find(_.atp.typeSymbol == Annotation.pure) match {
-        case None =>
-          val a = AnnotationInfo(Annotation.pure.tpe, Nil, Nil)
-          on.setAnnotations(a :: on.annotations)
-        case Some(_) => ()
-      }
-    }
-    def annotateImpure(on: Symbol): Unit = {
-      on.annotations.find(_.atp.typeSymbol == Annotation.impure) match {
-        case None =>
-          val a = AnnotationInfo(Annotation.impure.tpe, Nil, Nil)
-          on.setAnnotations(a :: on.annotations)
-        case Some(_) => ()
-      }
-    }
   }
 }

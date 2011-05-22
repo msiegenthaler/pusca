@@ -8,7 +8,7 @@ trait PureDefinitions {
   import global._
 
   protected def log(s: => String) = {
-    //    println(s)
+    //        println(s)
   }
 
   object PureFunction {
@@ -80,6 +80,23 @@ trait PureDefinitions {
     def unapply(t: Tree) = t match {
       case v: ValDef if ((v.symbol.flags & Flags.MUTABLE) != 0) => Some(v)
       case _ => None
+    }
+  }
+
+  def annotatePure(on: Symbol): Unit = {
+    on.annotations.find(_.atp.typeSymbol == Annotation.pure) match {
+      case None =>
+        val a = AnnotationInfo(Annotation.pure.tpe, Nil, Nil)
+        on.setAnnotations(a :: on.annotations)
+      case Some(_) => ()
+    }
+  }
+  def annotateImpure(on: Symbol): Unit = {
+    on.annotations.find(_.atp.typeSymbol == Annotation.impure) match {
+      case None =>
+        val a = AnnotationInfo(Annotation.impure.tpe, Nil, Nil)
+        on.setAnnotations(a :: on.annotations)
+      case Some(_) => ()
     }
   }
 

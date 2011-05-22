@@ -20,7 +20,7 @@ class RewriteImpureFunctionsComponent(val global: Global) extends PluginComponen
 
   class AnnotatePurityTransformer extends Transformer {
     override def transform(t: Tree) = t match {
-      case AnonFunction(c, f) =>
+      case AnonFunction(c, impl, f) =>
         val impures = impureContent(c) ++ impureContent(f)
         if (impures.isEmpty) {
           log("Anonymous function in " + c.symbol.owner.fullName + " markes as pure")
@@ -28,25 +28,45 @@ class RewriteImpureFunctionsComponent(val global: Global) extends PluginComponen
         } else {
           log("Anonymous function in " + c.symbol.owner.fullName + " markes as impure ")
           log(" because of " + impures)
-          super.transform(t)
-        }
 
+          //Remove the AbstractFunctionX as the parent
+          val np = impl.parents.map { p =>
+            val i = abstractFunctions.indexOf(p.symbol)
+            if (i > -1) {
+              val TypeRef(pre, sym, params) = p.tpe
+              val nr = TypeRef(pre, impureFunctions(i), params)
+              TypeTree(nr)
+            } else p
+          }
+          annotateImpure(f.symbol) //apply is now impure
+          val ni = impl.copy(parents = np)
+          val nc = c.copy(impl = ni)
+          nc
+        }
       case o => super.transform(t)
     }
   }
 
+  private val impureFunctions = (0 to 2).map(i => definitions.getClass("pusca.ImpureFunction" + i))
+  private val abstractFunctions = (0 to 22).map(i => definitions.getClass("scala.runtime.AbstractFunction" + i))
+
   object AnonFunction {
     def unapply(t: Tree) = t match {
-      case c: ClassDef if c.symbol.isAnonymousFunction =>
-        val applyFun = c.impl.children.find {
+      case c @ ClassDef(_, _, _, impl) if c.symbol.isAnonymousFunction =>
+        val applyFun = impl.body.find {
           _ match {
-            case d: DefDef if d.name.toString == "apply" =>
-              //TODO
-              true
+            case ApplyFunction(d) => true
             case _ => false
           }
         }
-        applyFun.map(f => (c, f))
+        applyFun.map(f => (c, impl, f.asInstanceOf[DefDef]))
+      case _ => None
+    }
+  }
+
+  object ApplyFunction {
+    def unapply(t: Tree) = t match {
+      case d: DefDef if d.name.toString == "apply" => Some(d)
       case _ => None
     }
   }
