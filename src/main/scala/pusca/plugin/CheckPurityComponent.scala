@@ -21,10 +21,21 @@ class CheckPurityComponent(val global: Global) extends PluginComponent with Pure
 
       def hasImpureResult(t: Tree) = {
         val tpe = t.tpe
+        println("## tpe: " + tpe + " (" + tpe.getClass + ")")
         tpe match {
           case MethodType(ss, AnnotatedType(as, _, _)) =>
             as.find(_.atp.typeSymbol == Annotation.impure).isDefined
           case _ => false
+        }
+      }
+      object FunctionValDef {
+        def unapply(t: Tree) = t match {
+          case v @ ValDef(_, _, tpt, rhs) if isFunction(tpt.tpe) => Some(v)
+          case _ => None
+        }
+        def isFunction(tpe: Type): Boolean = {
+          if (tpe.typeSymbol.fullName.startsWith("scala.Function")) true
+          else tpe.parents.foldLeft(false)((s, e) => s || isFunction(e))
         }
       }
 
@@ -32,6 +43,7 @@ class CheckPurityComponent(val global: Global) extends PluginComponent with Pure
         case a: Apply =>
           if (!satisfiesPureness(a.fun.symbol))
             unit.error(t.pos, "Impure function call to " + a.fun.symbol.fullName + " inside the pure function " + enclosingFun.fullName)
+          //TODO catching that via A to A @impure assigns would be easier...
           else if (hasImpureResult(a.fun))
             unit.error(t.pos, "Impure function call to " + a.fun.symbol.fullName + " inside the pure function " + enclosingFun.fullName)
           else a.args.foreach(checkPure(enclosingFun))
@@ -41,13 +53,25 @@ class CheckPurityComponent(val global: Global) extends PluginComponent with Pure
             unit.error(t.pos, "Pure function " + enclosingFun.fullName + " contains assignment to non-enclosed var " + a.lhs.symbol.fullName)
           else a.rhs.foreach(checkPure(enclosingFun))
 
-        //TODO ValDef of Function from A => B to A => B @impure
+        //TODO maybe better to check that in NoAssignmentsFromImpureToPureComponent
+        case FunctionValDef(v) =>
+          v.tpt.tpe match {
+            case TypeRef(pre, sym, args) =>
+              if (!args.find(_.annotations.find(_.atp.typeSymbol == Annotation.impure).isDefined).isDefined) {
+                //Left is pure
+                v.rhs.tpe match {
+                  case TypeRef(pre, sym, args) =>
+                    if (args.find(_.annotations.find(_.atp.typeSymbol == Annotation.impure).isDefined).isDefined)
+                      unit.error(t.pos, "Cannot assign a pure function to an impure one")
+                }
+              } else ()
+            case _ => ()
+          }
 
         case d: DefDef =>
           process(d)
         case o =>
           o.children.foreach(checkPure(enclosingFun))
-
       }
 
       def process(t: Tree): Unit = t match {

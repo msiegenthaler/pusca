@@ -8,7 +8,7 @@ trait PureDefinitions {
   import global._
 
   protected def log(s: => String) = {
-//    println(s)
+    //    println(s)
   }
 
   object PureFunction {
@@ -72,6 +72,8 @@ trait PureDefinitions {
     case symbol if symbol.isRefinementClass => isOnPurenessWhitelist(s)
     case _ => false
   }
+
+  val abstractFunctions = (0 to 22).map(i => definitions.getClass("scala.runtime.AbstractFunction" + i))
 
   def isVarAccessor(s: Symbol): Boolean = {
     s.isSetter || (s.isGetter && !s.isStable)
