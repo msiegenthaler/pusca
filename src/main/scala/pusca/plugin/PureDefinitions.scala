@@ -1,13 +1,14 @@
 package pusca.plugin
 
 import scala.tools.nsc.Global
+import scala.tools.nsc.symtab.Flags
 
 trait PureDefinitions {
   val global: Global
   import global._
 
   protected def log(s: => String) = {
-//    println(s)
+    //    println(s)
   }
 
   object PureFunction {
@@ -60,7 +61,6 @@ trait PureDefinitions {
     def packageWhitelist = Whitelist.packages.contains(p) && !Blacklist.objects.contains(c) && !Blacklist.funs.contains(f)
 
     val r = objectWhitelist || packageWhitelist
-//    log("# " + symbol.fullName + " is considered " + (if (r) "pure" else "impure"))
     r
   }
   def satisfiesPureness(s: Symbol): Boolean = s match {
@@ -71,6 +71,60 @@ trait PureDefinitions {
     case symbol if isOnPurenessWhitelist(symbol) => true
     case symbol if symbol.isRefinementClass => isOnPurenessWhitelist(s)
     case _ => false
+  }
+
+  def isVarAccessor(s: Symbol): Boolean = {
+    s.isSetter || (s.isGetter && !s.isStable)
+  }
+  object VarDef {
+    def unapply(t: Tree) = t match {
+      case v: ValDef if ((v.symbol.flags & Flags.MUTABLE) != 0) => Some(v)
+      case _ => None
+    }
+  }
+
+  /** Checks if the Tree is impure and returns all its impure content */
+  def impureContent(t: Tree): List[Tree] = {
+    def enclosingFun(s: Symbol): Symbol = s match {
+      case NoSymbol => NoSymbol
+      case s if s.isClass => NoSymbol
+      case s if s.isMethod => s
+      case s => enclosingFun(s.owner)
+    }
+    def exec(t: Tree, outermost: Boolean = false): List[Tree] = {
+      def handleAll(t: Traversable[Tree]) =
+        t.foldLeft[List[Tree]](Nil)((l, e) => exec(e) ::: l)
+
+      t match {
+        case Block(s, e) =>
+          handleAll(s :+ e)
+        case a: Apply =>
+          val l = handleAll(a.args)
+          if (!satisfiesPureness(a.fun.symbol)) a.fun :: l
+          else l
+        case a: Assign =>
+          val l = exec(a.rhs)
+          val ef = enclosingFun(a.symbol)
+          if (!a.lhs.symbol.ownerChain.contains(ef)) a :: l
+          else l
+        case t: Template =>
+          val l = t.parents.filter(t => !satisfiesPureness(t.symbol))
+          t.body.foldLeft(l) { (l, t) =>
+            t match {
+              case VarDef(v) => t :: l
+              case t: Assign => t :: l // all assigns in template body are bad
+              case t => exec(t) ::: l
+            }
+          }
+
+        // don't go into these things
+        case c: ClassDef if outermost => exec(c.impl)
+        case d: DefDef if outermost => exec(d.rhs)
+        case v: ValDef if outermost => exec(v.rhs)
+        case _ => Nil
+      }
+    }
+    exec(t, true).reverse
   }
 
   protected object Annotation {

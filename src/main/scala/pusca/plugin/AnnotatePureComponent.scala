@@ -4,7 +4,6 @@ import scala.tools.nsc.plugins.PluginComponent
 import scala.tools.nsc.transform.Transform
 import scala.tools.nsc.Global
 import scala.tools.nsc
-import nsc.symtab.Flags
 
 class AnnotatePureComponent(val global: Global) extends PluginComponent with PureDefinitions with Transform {
   import global._
@@ -13,17 +12,6 @@ class AnnotatePureComponent(val global: Global) extends PluginComponent with Pur
   val phaseName = "annotatePure"
   def newTransformer(unit: global.CompilationUnit) = {
     new AnnotatePurityTransformer
-  }
-
-  def isVarAccessor(s: Symbol): Boolean = {
-    s.isSetter || (s.isGetter && !s.isStable)
-  }
-
-  object VarDef {
-    def unapply(t: Tree) = t match {
-      case v: ValDef if ((v.symbol.flags & Flags.MUTABLE) != 0) => Some(v)
-      case _ => None
-    }
   }
 
   class AnnotatePurityTransformer extends Transformer {
@@ -57,28 +45,13 @@ class AnnotatePureComponent(val global: Global) extends PluginComponent with Pur
         super.transform(t)
 
       case c: ClassDef if !isImpure(c.symbol) =>
-        val impure = c.impl match {
-          case t: Template if t.parents.map(_.symbol).find(s => !satisfiesPureness(s)).isDefined =>
-            //if a class has an impure parent it's considered impure as well
-            log("annotating class (for constructors) " + c.symbol.fullName +
-              " as impure, because of impure superclasses (" + t.parents.map(_.symbol).filter(s => !satisfiesPureness(s)).mkString(", ") + ")")
-            annotateImpure(c.symbol)
-          case t: Template if t.body.find {
-            _ match {
-              case VarDef(v) => true //impure
-              case a: Apply if !satisfiesPureness(a.fun.symbol) => true //impure
-              case a: Apply => false //pure
-              case a: Assign => true //impure
-              case _ => false
-            }
-          }.isDefined =>
-            //initialization of the class results in impure calls
-            log("annotating class (for constructors) " + c.symbol.fullName +
-              " as impure because of impure calls in the initialization")
-            annotateImpure(c.symbol)
-          case _ =>
-            log("annotating class (for constructors) " + c.symbol.fullName + " as pure")
-            annotatePure(c.symbol)
+        val impures = impureContent(c)
+        if (impures.isEmpty) {
+          log("annotating class (for constructors) " + c.symbol.fullName + " as pure")
+          annotatePure(c.symbol)
+        } else {
+          log("annotating class (for constuctors) " + c.symbol.fullName + " as impure because the following members are impure: " + impures)
+          annotateImpure(c.symbol)
         }
         super.transform(t)
 

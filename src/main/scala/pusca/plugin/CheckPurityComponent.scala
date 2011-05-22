@@ -62,8 +62,6 @@ class CheckPurityComponent(val global: Global) extends PluginComponent with Pure
         case o => o.children.foreach(process _)
       }
 
-      //TODO what's with functions as arguments?
-
       process(unit.body)
     }
   }

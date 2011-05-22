@@ -15,17 +15,6 @@ class RewriteImpureFunctionsComponent(val global: Global) extends PluginComponen
     new AnnotatePurityTransformer
   }
 
-  def isVarAccessor(s: Symbol): Boolean = {
-    s.isSetter || (s.isGetter && !s.isStable)
-  }
-
-  object VarDef {
-    def unapply(t: Tree) = t match {
-      case v: ValDef if ((v.symbol.flags & Flags.MUTABLE) != 0) => Some(v)
-      case _ => None
-    }
-  }
-
   class AnnotatePurityTransformer extends Transformer {
     override def transform(t: Tree) = t match {
       case AnonFunction(c) =>
@@ -37,6 +26,7 @@ class RewriteImpureFunctionsComponent(val global: Global) extends PluginComponen
 
   object AnonFunction {
     def unapply(t: Tree) = t match {
+      //TODO does isAnonymousFunction also work?
       case c: ClassDef if c.symbol.isAnonymousClass && c.impl.parents.find(p => extendsFunction(p.symbol)).isDefined =>
         Some(c)
       case _ => None
