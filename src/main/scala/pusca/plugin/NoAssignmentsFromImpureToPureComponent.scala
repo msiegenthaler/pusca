@@ -59,7 +59,7 @@ class NoAssignmentsFromImpureToPureComponent(val global: Global) extends PluginC
           val impure = impureType(v.tpt.tpe)
           check(impure)(v.rhs)
         case d: DefDef =>
-          val impure = impureType(d.tpt.tpe)
+          val impure = impureType(d.tpt.tpe) || isImpure(d.symbol)
           check(impure)(d.rhs)
         case c: ClassDef =>
           check(false)(c.impl)
@@ -69,22 +69,6 @@ class NoAssignmentsFromImpureToPureComponent(val global: Global) extends PluginC
         case other =>
           val impure = impureType(other.tpe)
           other.children.foreach(check(impure))
-
-        //        case ValDef(_, _, tpt, rhs) if !impureType(tpt.tpe) && impureType(rhs.tpe) =>
-        //          unit.error(t.pos, "Cannot assign impure values to a pure val (" + rhs.tpe.typeSymbol.fullName + ")")
-        //
-        //        case v: ValDef =>
-        //        //v.rhs.children
-        //        //check(v.tpt)(v.rhs)
-        //
-        //        case Block(ss, e) =>
-        //          ss.foreach(check(true))
-        //          check(discarded)(e)
-        //
-        //        case a: Apply if discarded =>
-        //          a.tpe
-        //
-        //        case other => other.children.foreach(check(discarded))
       }
 
       check(false)(unit.body)

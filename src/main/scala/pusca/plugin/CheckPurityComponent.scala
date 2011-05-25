@@ -44,8 +44,8 @@ class CheckPurityComponent(val global: Global) extends PluginComponent with Pure
           if (!satisfiesPureness(a.fun.symbol))
             unit.error(t.pos, "Impure function call to " + a.fun.symbol.fullName + " inside the pure function " + enclosingFun.fullName)
           //TODO catching that via A to A @impure assigns would be easier...
-          else if (hasImpureResult(a.fun))
-            unit.error(t.pos, "Impure function call to " + a.fun.symbol.fullName + " inside the pure function " + enclosingFun.fullName)
+//          else if (hasImpureResult(a.fun))
+//            unit.error(t.pos, "Impure function call to " + a.fun.symbol.fullName + " inside the pure function " + enclosingFun.fullName)
           else a.args.foreach(checkPure(enclosingFun))
 
         case a: Assign =>
@@ -70,7 +70,7 @@ class CheckPurityComponent(val global: Global) extends PluginComponent with Pure
 
         case d @ ImpureFunction(rhs) =>
           log("Validating if " + d.symbol.fullName + " is allowed to be impure")
-          val pureOverrides = d.symbol.allOverriddenSymbols.filter(satisfiesPureness)
+          val pureOverrides = d.symbol.allOverriddenSymbols.filter(satisfiesPureness).filterNot(_.fullName.startsWith("scala.Function"))
           if (!pureOverrides.isEmpty) {
             if (pureOverrides.size == 1)
               unit.error(d.pos, "Impure function " + d.symbol.fullName + " cannot override pure function " + pureOverrides.head.fullName)
