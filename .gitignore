@@ -1,3 +1,4 @@
 target
 bin
 .scala_dependencies
+.target
