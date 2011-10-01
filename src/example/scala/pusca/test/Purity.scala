@@ -55,7 +55,7 @@ object Purity {
   }
   @impure
   def sumAndPrint_(a: Int, b: Int) = {
-    sysout("" + a + " + " + b) // error 5
+    sysout("" + a + " + " + b)
     a + b
   }
 
