@@ -58,22 +58,26 @@ class PluginTester {
 
       val cs = code.reverse.map(_ + "\n()").map(main.interpret).filterNot(_ == Results.Success).map(_.toString)
 
-      val errors = out.toString.split("\n").toList.
+      val outLines = out.toString.split("\n").toList.map { s => s.dropRight(s.reverse.takeWhile(_ == '\n').length) }
+      val errors = outLines.
         filter(s => s.startsWith("<console>:") || s.startsWith("[init]")).
-        filter(_.contains("error: ")).
-        map { s => s.dropRight(s.reverse.takeWhile(_ == '\n').length) }
+        filter(_.contains("error: "))
+      val warnings = outLines.
+      	filter(_.startsWith("<console>:")).
+      	filter(_.contains("warning: "))
 
       println(out)
 
-      PluginTestResult(out.toString, None, if (errors.isEmpty) cs else errors)
+      PluginTestResult(out.toString, None, if (errors.isEmpty) cs else errors, warnings)
     } catch {
-      case e => PluginTestResult(out.toString, Some(e), Nil)
+      case e => PluginTestResult(out.toString, Some(e), Nil, Nil)
     }
   }
 }
 
-case class PluginTestResult(out: String, exception: Option[Throwable], compileErrors: List[String]) {
+case class PluginTestResult(out: String, exception: Option[Throwable], compileErrors: List[String], warnings: List[String]) {
   def compiled = compileErrors.isEmpty
   def notcompiled = !compiled
   def hasError(text: String) = !compileErrors.filter(_.contains(text)).isEmpty
+  def problems = compileErrors ::: warnings
 }
