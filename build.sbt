@@ -10,6 +10,9 @@ scalaVersion := "2.9.1"
 
 libraryDependencies += "org.scala-lang" % "scala-compiler" % "2.9.1"
 
+libraryDependencies += "org.scalatest" %% "scalatest" % "1.6.1"
+
+libraryDependencies += "junit" % "junit" % "4.4"
 
 
 resolvers ++= Seq(
