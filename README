@@ -1,21 +1,22 @@
-Pure functions (@pure) may not
+Pure functions/methods (@pure) may not
 - call impure functions
-- assign to var's defined outside the function
 - read a var defined outside the function
+- assign to var's defined outside the function
 - be overriden by an impure function
-- perform IO/change the world
+- perform IO (aka change the world)
 
 
-Remarks: <init> is considered a normal function
+Remarks: <init> is considered a normal method
 
 Pure is the default for methods, every method not marked @impure is considered pure and the constraints are checked, yielding
 compiler errors when violated. 
 
-@declarePure can be used to declare impure methods to be pure after all. I.e. if they use impure implementations details but
-are referential transparent. 
+@declarePure can be used to declare impure methods to be pure. I.e. if they use impure implementations details but
+are referential transparent.
 
 
-TODO impure-functions as parameters for pure functions?
+Function0-21 are impure and pusca defines the pure subclasses PureFunction0-21. All functions/parameters not marked @impure will
+be converted to PureFunction0-21. 
 
 
 see also http://jnordenberg.blogspot.com/2008/10/functional-purity-in-scala.html
