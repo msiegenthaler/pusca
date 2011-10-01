@@ -4,7 +4,7 @@ import org.scalatest.junit.JUnitSuite
 import org.scalatest.junit.ShouldMatchersForJUnit
 import org.junit.Test
 
-class ScalaLibraryCalls extends JUnitSuite with ShouldMatchersForJUnit {
+class ScalaLibraryCallsTest extends JUnitSuite with ShouldMatchersForJUnit {
   
   @Test def callToExternalImpureFunctionPrintlnInsidePureFunction {
     val e = PluginTester("def b(a: String) = println(a)").compileErrors
