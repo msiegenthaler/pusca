@@ -48,7 +48,8 @@ class PluginTester {
       s.usejavacp.value = true
       s.require.appendToValue("pure")
       //point to the compiled classfiles
-      s.pluginsDir.value = (new File("target/scala-2.9.1/classes").getAbsoluteFile.toString + "/")
+//      s.pluginsDir.value = (new File("target/scala-2.9.1/classes").getAbsoluteFile.toString + "/")
+      s.pluginsDir.value = (new File(".target/scala-2.9.1/classes").getAbsoluteFile.toString + "/")
       //must be inside a jar
       s.plugin.appendToValue(new File("src/test/pusca-descriptor.jar").getAbsoluteFile.toString)
 
