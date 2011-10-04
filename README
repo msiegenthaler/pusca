@@ -1,22 +1,28 @@
-Pure functions/methods (@pure) may not
-- call impure functions
-- read a var defined outside the function
-- assign to var's defined outside the function
-- be overriden by an impure function
-- perform IO (aka change the world)
+Allows the enforcement of purity in methods/functions. A function is pure if:
+- it does not call an impure function
+- does not read a var defined outside the function
+- does not assign to a var defined outside the function
+- perform any interaction with the 'world' (which is basically an impure action)
+-> is referential transparent (always the same output for the same input)
+
+A pure method can only be overridden by a pure method, overriding pure methods with impure methods is not allowed.
 
 
-Remarks: <init> is considered a normal method
+There are two possibilities to declare a method as impure:
+		def println(s: String): Unit @sideEffect
+	or
+		@impure def println(s: String): Unit
+Both variants are equal, there are no difference between them. The compiler can infer the impureness of a method if the
+last statement of the method body is a call to an impure method.
+	def hello = println("Hi there) // inferred to 'def hello: Unit @sideEffect' 
 
-Pure is the default for methods, every method not marked @impure is considered pure and the constraints are checked, yielding
-compiler errors when violated. 
+Methods that would be considered impure according to the rules above can be declared as pure by the developer. The
+compiler will not check if those methods really are referential transparent or cause no side effects, this is the
+responsibility of the developer. Use this syntax to declare a method as pure
+	@declarePure def log(s: String) { println("LOG "+s) }
 
-@declarePure can be used to declare impure methods to be pure. I.e. if they use impure implementations details but
-are referential transparent.
-
-
-Function0-21 are impure and pusca defines the pure subclasses PureFunction0-21. All functions/parameters not marked @impure will
-be converted to PureFunction0-21. 
-
-
-see also http://jnordenberg.blogspot.com/2008/10/functional-purity-in-scala.html
+Constructor: Is considered a normal method, but is annotated on the class itself. The @impure and @declarePure annotations
+can be used. Example:
+	@impure class MyClass {
+		println("Hi") // impure call
+	} 
