@@ -53,7 +53,7 @@ class OverrideTest extends JUnitSuite with ShouldMatchersForJUnit {
     e should have size (1)
     e.head should include("cannot override pure")
   }
-  
+
   @Test def impureMayNotOverridePureNonAbstract {
     val e = PluginTester("""
   			trait A { def a: String = "Ho" }

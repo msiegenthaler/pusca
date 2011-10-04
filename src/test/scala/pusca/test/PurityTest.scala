@@ -110,5 +110,4 @@ class PurityTest extends JUnitSuite with ShouldMatchersForJUnit {
     		def c = b""") should be('compiled)
   }
 
-
 }

@@ -48,30 +48,28 @@ class PluginTester {
       s.usejavacp.value = true
       s.require.appendToValue("pure")
       //point to the compiled classfiles
-//      s.pluginsDir.value = (new File("target/scala-2.9.1/classes").getAbsoluteFile.toString + "/")
-      s.pluginsDir.value = (new File(".target/scala-2.9.1/classes").getAbsoluteFile.toString + "/")
+      //s.pluginsDir.value = (new File("target/scala-2.9.1/classes").getAbsoluteFile.toString + "/") //sbt
+      s.pluginsDir.value = (new File(".target/scala-2.9.1/classes").getAbsoluteFile.toString + "/") //eclipse
       //must be inside a jar
       s.plugin.appendToValue(new File("src/test/pusca-descriptor.jar").getAbsoluteFile.toString)
 
       val main = new IMain(s, new PrintWriter(out))
 
-      main.compiler.plugins
-
       val cs = code.reverse.map(_ + "\n()").map(main.interpret).filterNot(_ == Results.Success).map(_.toString)
 
-      val outLines = out.toString.split("\n").toList.map { s => s.dropRight(s.reverse.takeWhile(_ == '\n').length) }
+      val outLines = out.toString.split("\n").toList.map { s ⇒ s.dropRight(s.reverse.takeWhile(_ == '\n').length) }
       val errors = outLines.
-        filter(s => s.startsWith("<console>:") || s.startsWith("[init]")).
+        filter(s ⇒ s.startsWith("<console>:") || s.startsWith("[init]")).
         filter(_.contains("error: "))
       val warnings = outLines.
-      	filter(_.startsWith("<console>:")).
-      	filter(_.contains("warning: "))
+        filter(_.startsWith("<console>:")).
+        filter(_.contains("warning: "))
 
       println(out)
 
       PluginTestResult(out.toString, None, if (errors.isEmpty) cs else errors, warnings)
     } catch {
-      case e => PluginTestResult(out.toString, Some(e), Nil, Nil)
+      case e ⇒ PluginTestResult(out.toString, Some(e), Nil, Nil)
     }
   }
 }

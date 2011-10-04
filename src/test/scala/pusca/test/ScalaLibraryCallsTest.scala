@@ -5,7 +5,7 @@ import org.scalatest.junit.ShouldMatchersForJUnit
 import org.junit.Test
 
 class ScalaLibraryCallsTest extends JUnitSuite with ShouldMatchersForJUnit {
-  
+
   @Test def callToExternalImpureFunctionPrintlnInsidePureFunction {
     val e = PluginTester("def b(a: String) = println(a)").compileErrors
     e should have size (1)
@@ -16,5 +16,4 @@ class ScalaLibraryCallsTest extends JUnitSuite with ShouldMatchersForJUnit {
   @Test def callToExternalImpureFunctionPrintlnInsideImpureFunction {
     PluginTester("@impure def b(a: String) = println(a)") should be('compiled)
   }
-  
 }

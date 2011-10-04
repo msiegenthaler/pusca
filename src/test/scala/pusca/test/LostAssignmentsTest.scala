@@ -89,36 +89,36 @@ class LostAssignmentsTest extends JUnitSuite with ShouldMatchersForJUnit {
   			}""").problems
     w should have size (0)
   }
-  
+
   @Test def dontWarnOnImpureCalls {
-  	val w = PluginTester("""
+    val w = PluginTester("""
   			@impure def a = "Hallo"
   			@impure def b = {
   				a
   				10
   			}""").problems
-  	w should have size (0)
+    w should have size (0)
   }
-  
+
   @Test def warnOnLiteralInImpure {
-  	val w = PluginTester("""
+    val w = PluginTester("""
   			@impure def b = {
   				20
   				10
   			}""").problems
-  	w should have size (1)
-  	w.head should include("Literal is not used")
+    w should have size (1)
+    w.head should include("Literal is not used")
   }
-  
+
   @Test def warnOnPureFunctionInImpure {
-  	val w = PluginTester("""
+    val w = PluginTester("""
   			def a = 20
   			@impure def b = {
   				a
   				10
   			}""").problems
-  	w should have size (1)
-  	w.head should include("Result of call is not used")
+    w should have size (1)
+    w.head should include("Result of call is not used")
   }
 
 }
