@@ -9,9 +9,9 @@ A pure method can only be overridden by a pure method, overriding pure methods w
 
 
 There are two possibilities to declare a method as impure:
-		def println(s: String): Unit @sideEffect
-	or
-		@impure def println(s: String): Unit
+	def println(s: String): Unit @sideEffect
+or
+	@impure def println(s: String): Unit
 Both variants are equal, there are no difference between them. The compiler can infer the impureness of a method if the
 last statement of the method body is a call to an impure method.
 	def hello = println("Hi there) // inferred to 'def hello: Unit @sideEffect' 
