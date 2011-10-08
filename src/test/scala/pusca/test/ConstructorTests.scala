@@ -3,86 +3,57 @@ package pusca.test
 import org.scalatest.junit.JUnitSuite
 import org.scalatest.junit.ShouldMatchersForJUnit
 import org.junit.Test
+import PluginTester._
 
 class ConstructorTests extends JUnitSuite with ShouldMatchersForJUnit {
 
   @Test def pureFunctionMayCallPureConstructor {
-    PluginTester("""
-    		class A { val x = "Hi" }
-    		def makeA = new A""") should be('compiled)
+    code("""
+    		@impure class A { val x = "Hi" }
+    		def makeA = new A""") should compile
   }
+
   @Test def pureFunctionMayCallPureConstructor2 {
-    PluginTester("""
-  			class A(a: String)
-  			def makeA = new A("Hi")""") should be('compiled)
+    code("""
+  			@impure class A(a: String)
+  			def makeA = new A("Hi")""") should compile
   }
 
   @Test def impureFunctionMayCallImpureConstructor {
-    PluginTester("""
-  			class A(var x: String)
-  			@impure def makeA = new A("hi")""") should be('compiled)
+    code("""
+  			@impure class A(var x: String)
+  			@impure def makeA = new A("hi")""") should compile
   }
 
   @Test def impureFunctionMayCallPureConstructor {
-    PluginTester("""
-  			class A { val x = "Hi" }
-  			@impure def makeA = new A""") should be('compiled)
+    code("""
+  			@impure class A { val x = "Hi" }
+  			@impure def makeA = new A""") should compile
   }
 
-  @Test def constuctorThatAccessesVarIsImpure {
-    val e = PluginTester("""
-    		class A { var x = "Hi" }
-    		def makeA = new A""").compileErrors
-    e should have size (1)
-    e.head should include("Impure function call to A.<init>")
+  @Test def pureFunctionCannotCallImpureConstuctor {
+    code("""
+    		@impure class A { var x = "Hi" }
+    		def makeA = new A""") should
+      yieldCompileError("impure function call inside the pure function 'makeA'")
   }
 
-  @Test def constuctorThatAccessesVarIsImpure2 {
-    val e = PluginTester("""
-  			class A(var x: String)
-  			def makeA = new A("hi")""").compileErrors
-    e should have size (1)
-    e.head should include("Impure function call to A.<init>")
+  @Test def cannotExtendClassWithImpureConstructorWithAPureOne {
+    code("""
+        @impure def ip(s: String) = ()
+  			@impure class A { ip("hi") }
+  			@pure class B extends A""") should
+      yieldCompileError("impure function call inside the pure function '<init>'")
   }
 
-  @Test def constructorThatCallsImpureMethodIsImpure {
-    val e = PluginTester("""
-  			class A { println("hi") }
-  			def makeA = new A""").compileErrors
-    e should have size (1)
-    e.head should include("Impure function call to A.<init>")
+  @Test def constructorNotDeclaredImpureMayNotUseVars {
+    code("trait A { var a = 1 }") should yieldCompileError("access to non-local var inside the pure function '<init>'")
   }
 
-  @Test def impureConstructorsGetInherited = {
-    val e = PluginTester("""
-  			class A { println("hi") }
-  			class B extends A
-  			def makeB = new B""").compileErrors
-    e should have size (1)
-    e.head should include("Impure function call to B.<init>")
+  @Test def constructorNotDeclaredImpureMayNotCallImpureFunction {
+    code("""
+        @impure def ip(s: Strint) = ()
+ 				trait A { ip("Hi") }
+        """) should yieldCompileError("impure function call inside the pure function '<init>'")
   }
-
-  @Test def impureConstructorsGetInherited2 = {
-    val e = PluginTester("""
-  			class A { var a = 0 }
-  			class B extends A
-  			def makeB = new B""").compileErrors
-    e should have size (1)
-    e.head should include("Impure function call to B.<init>")
-  }
-
-  @Test def impureConstructorsGetInheritedByAnonClasses = {
-    val e = PluginTester("""
-				trait A { val a: String; println("Hi") }
- 				def makeA = new A { override val a = "Hi" }""").compileErrors
-    e should have size (1)
-    e.head should include("Impure function call to $anon.<init>")
-  }
-
-  @Test def pureConstructorsGetInheritedByAnonClasses = {
-    PluginTester("""
- 				trait A { val a: String }
-  			def makeA = new A { override val a = "Hi" }""") should be('compiled)
-  }
-
 }
