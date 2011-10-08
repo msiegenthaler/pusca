@@ -3,20 +3,19 @@ package pusca.test
 import org.scalatest.junit.JUnitSuite
 import org.scalatest.junit.ShouldMatchersForJUnit
 import org.junit.Test
+import PluginTester._
 
 class PurityDefinitionTest extends JUnitSuite with ShouldMatchersForJUnit {
 
   private def assertPure(definition: String, call: String) = {
     val a = "@pure def checker = " + call
-    new PluginTester().fromString(definition).fromString(a).run should be('compiled)
+    new PluginTester().fromString(definition).fromString(a).run should compile
   }
   private def assertImpure(definition: String, call: String) = {
     val a = "@pure def checker = " + call
     val b = "@impure def impureChecker = " + call
-    val res = new PluginTester().fromString(definition).fromString(a).fromString(b).run
-    val e = res.compileErrors
-    e should have size (1)
-    e.head should include("Impure function call inside the pure function 'checker'")
+    new PluginTester().fromString(definition).fromString(a).fromString(b).run should
+    	yieldCompileError("impure function call inside the pure function 'checker'")
   }
 
   @Test def defPureFunctionImplicit {
@@ -65,7 +64,7 @@ class PurityDefinitionTest extends JUnitSuite with ShouldMatchersForJUnit {
     assertPure("class X(a: Int, val b: Int) { val x = 0 }", "new X(1, 2)")
   }
   @Test def impureClassConstructor {
-	  assertImpure("""
+    assertImpure("""
 			  def ip(a: String): Unit @sideEffect = ()
 			  @impure class X { val a = ip("Hi") }""", "new X()")
   }

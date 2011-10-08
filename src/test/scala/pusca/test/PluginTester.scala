@@ -5,9 +5,30 @@ import java.io._
 import scala.tools.nsc._
 import scala.tools.nsc.settings._
 import scala.tools.nsc.interpreter._
+import org.scalatest.matchers.MatchResult
+import org.scalatest.matchers.Matcher
 
 object PluginTester {
   def apply(code: String) = new PluginTester().fromString(code).run
+
+  class CompilesMatcher extends Matcher[PluginTestResult] {
+    override def apply(r: PluginTestResult) = {
+      MatchResult(r.compiled, "The compilation failed: " + r.compileErrors, "The compilation did not fail")
+    }
+  }
+  class CompileErrorMatcher(expect: List[String]) extends Matcher[PluginTestResult] {
+    override def apply(r: PluginTestResult) = {
+      val expectedButNotFound = expect.filterNot(e ⇒ r.compileErrors.find(_.contains(e)).isDefined)
+      val unexpected = r.compileErrors.filterNot(e ⇒ expect.find(e.contains(_)).isDefined)
+      val errors = List(
+        (if (!expectedButNotFound.isEmpty) "Missing compilation errors: " + expectedButNotFound else ""),
+        (if (!unexpected.isEmpty) "Unexpected compilation errors: " + unexpected else "")).mkString(". ")
+      MatchResult(expectedButNotFound.isEmpty && unexpected.isEmpty, errors, "NOT " + errors)
+    }
+  }
+
+  def yieldCompileError(errors: String*) = new CompileErrorMatcher(errors.toList)
+  val compile = new CompilesMatcher
 }
 
 class PluginTester {
