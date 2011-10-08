@@ -3,62 +3,66 @@ package pusca.test
 import org.scalatest.junit.JUnitSuite
 import org.scalatest.junit.ShouldMatchersForJUnit
 import org.junit.Test
+import PluginTester._
 
 class OverrideTest extends JUnitSuite with ShouldMatchersForJUnit {
   @Test def pureMayOverridePureAbstract {
-    PluginTester("""
-    		trait A { def a: String }
-    		class B extends A { override def a = "Hi" }""") should be('compiled)
+    code("""
+    		trait A { @pure def a: String }
+    		class B extends A { override def a = "Hi" }""") should compile
   }
-
+  
+  @Test def pureMayOverridePureAbstract2 {
+    code("""
+    		trait A { def a: String }
+    		class B extends A { override def a = "Hi" }""") should compile
+  }
+  
   @Test def pureMayOverridePure {
-    PluginTester("""
+    code("""
   			trait A { def a: String }
   			class B extends A { override def a = "Hi" }
-  			class C extends B { override def a = super.a + "!" }""") should be('compiled)
+  			class C extends B { override def a = super.a + "!" }""") should compile
   }
 
   @Test def impureMayOverrideImpure {
-    PluginTester("""
+    code("""
     		trait A { @impure def a: String }
-    		class B extends A { @impure override def a = "Hi" }""") should be('compiled)
+    		class B extends A { @impure override def a = "Hi" }""") should compile
   }
 
   @Test def pureMayOverrideImpure {
-    PluginTester("""
+    code("""
     		trait A { @impure def a: String }
-    		class B extends A { override def a = "Hi" }""") should be('compiled)
+    		class B extends A { override def a = "Hi" }""") should compile
   }
 
   @Test def pureMayOverrideImpureNonAbstract {
-    PluginTester("""
+    code("""
   			trait A { @impure def a: String }
   			class B extends A { @impure override def a = "Hi" }
-  			class C extends B { override def a = "Ho" }""") should be('compiled)
+  			class C extends B { override def a = "Ho" }""") should compile
   }
 
   @Test def pureMayOverrideImpureButNotCallSuper {
-    val e = PluginTester("""
+    code("""
     		trait A { @impure def a: String }
     		class B extends A { @impure override def a = "Hi" }
-    		class C extends B { override def a = super.a + "!" }""").compileErrors
-    e should have size (1)
-    e.head should include("Impure function call")
+    		class C extends B { override def a = super.a + "!" }""") should
+    			yieldCompileError("impure function call inside the pure function 'a'")
   }
 
   @Test def impureMayNotOverridePure {
-    val e = PluginTester("""
+    code("""
   			trait A { def a: String }
-  			class B extends A { @impure override def a = "Hi" }""").compileErrors
-    e should have size (1)
-    e.head should include("cannot override pure")
+  			class B extends A { @impure override def a = "Hi" }""") should
+  				yieldCompileError("cannot override pure function 'a'")
   }
 
   @Test def impureMayNotOverridePureNonAbstract {
-    val e = PluginTester("""
+    code("""
   			trait A { def a: String = "Ho" }
-  	    class B extends A { @impure override def a = "Hi" }""").compileErrors
-    e should have size (1)
-    e.head should include("cannot override pure")
+  	    class B extends A { @impure override def a = "Hi" }""") should
+  	    	yieldCompileError("cannot override pure function 'a'")
   }
 }

@@ -27,6 +27,7 @@ object PluginTester {
     }
   }
 
+  def code(code: String) = this(code)
   def yieldCompileError(errors: String*) = new CompileErrorMatcher(errors.toList)
   val compile = new CompilesMatcher
 }
