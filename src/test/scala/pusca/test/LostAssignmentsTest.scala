@@ -3,122 +3,102 @@ package pusca.test
 import org.scalatest.junit.JUnitSuite
 import org.scalatest.junit.ShouldMatchersForJUnit
 import org.junit.Test
+import PluginTester._
 
 class LostAssignmentsTest extends JUnitSuite with ShouldMatchersForJUnit {
 
   @Test def warnOnNotAssignedLiteral {
-    val w = PluginTester("""
+    code("""
     		def a = {
     			"Hello"
     			"Huhu"
-    		}
-    	""").problems
-    w should have size (1)
-    w.head should include("Literal is not used")
+    		}""") should warn("literal is not used")
   }
 
   @Test def dontWarnIfAssigned {
-    val w = PluginTester("""
+    code("""
   			def a = {
   				val a = "Hello"
     			"huhu"
-  			}""").problems
-    w should have size (0)
+  			}""") should compile
   }
 
   @Test def warnOnLastStatementInUnitMethods {
-    val w = PluginTester("""
+    code("""
   			def a {
   				"Hello"
-  			}""").problems
-    w should have size (1)
-    w.head should include("Literal is not used")
+  			}""") should warn("literal is not used")
   }
 
   @Test def warnOnLastStatementInUnitMethods2 {
-    val w = PluginTester("""
+    code("""
   			def a: Unit = {
   				"Hello"
-  			}""").problems
-    w should have size (1)
-    w.head should include("Literal is not used")
+  			}""") should warn("literal is not used")
   }
 
   @Test def dontWarnOnLastStatementInMethods {
-    val w = PluginTester("""
+    code("""
   			def a: String = {
   				"Hello"
-  			}""").problems
-    w should have size (0)
+  			}""") should compile
   }
 
   @Test def dontWarnOnLastStatementInMethods2 {
-    val w = PluginTester("""
+    code("""
   			def a = {
   				"Hello"
-  			}""").problems
-    w should have size (0)
+  			}""") should compile
   }
 
   @Test def warnOnNotAssignedMethodResult {
-    val w = PluginTester("""
+    code("""
     		def b = 200
     		def a = {
     			b
     			10
-    		}""").problems
-    w should have size (1)
-    w.head should include("Result of call is not used")
+    		}""") should warn("result of call is not used")
   }
 
   @Test def warnOnPointlessCallsInConstructor {
-    val w = PluginTester("""
+    code("""
     		def b = 200
     		class A {
     			b
-    		}""").problems
-    w should have size (1)
-    w.head should include("Result of call is not used")
+    		}""") should warn("result of call is not used")
   }
 
   @Test def dontWarnOnCallsInConstructorThatAreAssignedToVal {
-    val w = PluginTester("""
+    code("""
   			def b = 200
   			class A {
   				val a = b
-  			}""").problems
-    w should have size (0)
+  			}""") should compile
   }
 
   @Test def dontWarnOnImpureCalls {
-    val w = PluginTester("""
+    code("""
   			@impure def a = "Hallo"
   			@impure def b = {
   				a
   				10
-  			}""").problems
-    w should have size (0)
+  			}""") should compile
   }
 
   @Test def warnOnLiteralInImpure {
-    val w = PluginTester("""
+    code("""
   			@impure def b = {
   				20
   				10
-  			}""").problems
-    w should have size (1)
-    w.head should include("Literal is not used")
+  			}""") should warn("literal is not used")
   }
 
   @Test def warnOnPureFunctionInImpure {
-    val w = PluginTester("""
+    code("""
   			def a = 20
   			@impure def b = {
   				a
   				10
-  			}""").problems
-    w should have size (1)
-    w.head should include("Result of call is not used")
+  			}""") should warn("result of call is not used")
   }
-
 }
