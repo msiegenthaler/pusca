@@ -21,8 +21,8 @@ object PluginTester {
       val expectedButNotFound = expect.filterNot(e ⇒ r.compileErrors.find(_.contains(e)).isDefined)
       val unexpected = r.compileErrors.filterNot(e ⇒ expect.find(e.contains(_)).isDefined)
       val errors = List(
-        (if (!expectedButNotFound.isEmpty) "Missing compilation errors: " + expectedButNotFound else ""),
-        (if (!unexpected.isEmpty) "Unexpected compilation errors: " + unexpected else "")).mkString(". ")
+        (if (!expectedButNotFound.isEmpty) "Missing compilation errors: " + expectedButNotFound.mkString(", ") else ""),
+        (if (!unexpected.isEmpty) "Unexpected compilation errors: " + unexpected.mkString(", ") else "")).mkString(". ")
       MatchResult(expectedButNotFound.isEmpty && unexpected.isEmpty, errors, "NOT " + errors)
     }
   }
