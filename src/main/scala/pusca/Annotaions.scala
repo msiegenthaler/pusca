@@ -1,5 +1,7 @@
 package pusca
 
+import scala.annotation.TypeConstraint
+
 /** Annotation the defines the pureness of a method. The constructor is annotated on the class itself. */
 sealed class PurenessAnnotation extends StaticAnnotation
 
@@ -24,6 +26,11 @@ class dependentPure extends PurenessAnnotation
 /** The method is declared as impure. */
 class impure extends PurenessAnnotation
 
+/**
+ * Applicable on types that are used as return type to express the along with the type a side effect is caused
+ * by the method (or the method depends on a side effect
+ */
+class sideEffect extends StaticAnnotation with TypeConstraint
 
-/** Implementation detail, used by the compiler plugin to specify dependentPure further. */ 
+/** Implementation detail, used by the compiler plugin to specify dependentPure further. */
 private[pusca] class purenessDependsOn(params: List[Symbol]) extends StaticAnnotation
