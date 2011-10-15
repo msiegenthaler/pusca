@@ -10,7 +10,13 @@ class PurePlugin(val global: Global) extends Plugin {
   val name = "pure"
   val description = "Enforces pureness"
   val components = List[PluginComponent]( //
-    ShowTreeComponent) //
+  //    ShowTreeComponent) //
+  )
+
+  val checker = new SideEffectChecker {
+    val global: PurePlugin.this.global.type = PurePlugin.this.global
+  }
+  global.addAnnotationChecker(checker.checker)
 
   import global._
   private object ShowTreeComponent extends PluginComponent {
