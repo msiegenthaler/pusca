@@ -13,6 +13,7 @@ class PurePlugin(val global: Global) extends Plugin {
 //    ShowTreeComponent, //
     new DeclarationConflictDetectorComponent(global),
     new UnnecessaryDeclarePureComponent(global),
+    new ForbiddenSideEffectAssignmentComponent(global),
     new MethodReturnTypeAnnotatorComponent(global))
 
   val checker = new SideEffectChecker {
