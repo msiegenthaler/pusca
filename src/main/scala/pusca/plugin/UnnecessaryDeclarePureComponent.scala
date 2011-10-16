@@ -4,7 +4,10 @@ import scala.tools.nsc.plugins.PluginComponent
 import scala.tools.nsc.Global
 import scala.tools.nsc.Phase
 
-class UnnessesaryDeclarePureComponent(val global: Global) extends PluginComponent with PuscaDefinitions {
+/**
+ * Warns on unnecessary @delcarePure annotations. The annotation is not necessary if the method is pure anyway.
+ */
+class UnnecessaryDeclarePureComponent(val global: Global) extends PluginComponent with PuscaDefinitions {
   import global._
 
   val runsAfter = List("typer")
