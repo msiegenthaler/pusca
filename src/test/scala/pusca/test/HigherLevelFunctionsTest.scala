@@ -10,7 +10,7 @@ class HigherLevelFunctionsTest extends JUnitSuite with ShouldMatchersForJUnit {
   @Test def functionWithSideEffectIsNotCompatibleWithPure {
     code("""
         @pure def m(f: String => Int) = {
-        	f("Hi) == 0
+        	f("Hi") == 0
     		}
         @impure def p(s: String) = s.length
     		@pure def x = {
@@ -22,7 +22,7 @@ class HigherLevelFunctionsTest extends JUnitSuite with ShouldMatchersForJUnit {
   @Test def functionWithSideEffectIsNotCompatibleWithPurePartialApplication {
   	code("""
   			@pure def m(f: String => Int) = {
-  				f("Hi) == 0
+  				f("Hi") == 0
   			}
   			@impure def p(i: Int)(s: String) = s.length * i
   			@pure def x = {
@@ -33,7 +33,7 @@ class HigherLevelFunctionsTest extends JUnitSuite with ShouldMatchersForJUnit {
   @Test def functionWithSideEffectIsNotCompatibleWithPurePartialApplication2 {
   	code("""
   			@pure def m(f: String => Int) = {
-  				f("Hi) == 0
+  				f("Hi") == 0
   			}
   			@impure def p(i: Int, s: String) = s.length * i
   			@pure def x = {
@@ -133,5 +133,44 @@ class HigherLevelFunctionsTest extends JUnitSuite with ShouldMatchersForJUnit {
   			@impure def il(i: String) = i.length
   			@pure def x = m(s => il(s))
   		""") should yieldCompileError("impure function call inside the pure function 'x'")
+  }
+  
+  @Test def pureFunctionWithParameterThatIsNotAReturnValueAcceptsPure {
+    code("""
+        @pure def m[A](f: String => A): Unit = {
+        	f("Huhu")
+        	()
+    		}
+        @pure def x = m(_.length)
+      """) should compile
+  }
+  @Test def pureFunctionWithParameterThatIsNotAReturnValueDoesNotAcceptImpure {
+  	code("""
+  			@pure def m[A](f: String => A): Unit = {
+  				f("Huhu")
+  				()
+  			}
+  	    @impure def l(s: String) = s.length
+  			@pure def x = m(l)
+  	""") should yieldCompileError("type-parameter of function m must not be impure")
+  }
+  
+  @Test def pureFunctionWithParameterDeclaredSideEffectAcceptsPure {
+    code("""
+        @pure def m[A <: Any @sideEffect](f: String => A): Unit = ()
+        @pure def x = m(_.length)
+      """) should compile
+  }
+  @Test def pureFunctionWithParameterDeclaredSideEffectAcceptsImpure {
+    code("""
+        @pure def m[A <: Any @sideEffect](f: String => A): Unit = ()
+    		@impure def l(s: String) = s.length
+        @pure def x = m(l)
+      """) should compile
+  }
+  @Test def pureFunctionWithParameterDeclaredSideEffectCannotEvaluateIt {
+    code("""
+        @pure def m[A <: Any @sideEffect](f: String => A): Unit = f("hi")
+      """) should yieldCompileError("impure function call inside the pure function 'm'")
   }
 }
