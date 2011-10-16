@@ -13,7 +13,9 @@ object PluginTester {
 
   class CompilesMatcher extends Matcher[PluginTestResult] {
     override def apply(r: PluginTestResult) = {
-      MatchResult(r.compiled && r.warnings.isEmpty, "The compilation failed: " + (r.compileErrors :: r.warnings).mkString(", "), "The compilation did not fail")
+      MatchResult(r.compiled && r.warnings.isEmpty && r.exception.isEmpty, 
+          "The compilation failed: " + (r.compileErrors :: r.warnings :: r.exception.map(e => List(e.toString)).getOrElse(Nil)).mkString(", "),
+          "The compilation did not fail")
     }
   }
   class CompileErrorMatcher(expect: List[String]) extends Matcher[PluginTestResult] {
@@ -21,9 +23,10 @@ object PluginTester {
       val expectedButNotFound = expect.filterNot(e ⇒ r.compileErrors.find(_.contains(e)).isDefined)
       val unexpected = r.compileErrors.filterNot(e ⇒ expect.find(e.contains(_)).isDefined)
       val errors = List(
+        (if (r.exception.isDefined) "Exception during compilation: " + r.exception.get else ""),
         (if (!expectedButNotFound.isEmpty) "Missing compilation errors: " + expectedButNotFound.mkString(", ") else ""),
         (if (!unexpected.isEmpty || !r.warnings.isEmpty) "Unexpected compilation errors/warnings: " + (unexpected ::: r.warnings).mkString(", ") else "")).mkString(". ")
-      MatchResult(r.warnings.isEmpty && expectedButNotFound.isEmpty && unexpected.isEmpty, errors, "NOT " + errors)
+      MatchResult(r.warnings.isEmpty && expectedButNotFound.isEmpty && unexpected.isEmpty && r.exception.isEmpty, errors, "NOT " + errors)
     }
   }
   class CompileWarnsMatcher(expect: List[String]) extends Matcher[PluginTestResult] {
@@ -31,9 +34,10 @@ object PluginTester {
       val expectedButNotFound = expect.filterNot(e ⇒ r.warnings.find(_.contains(e)).isDefined)
       val unexpected = r.warnings.filterNot(e ⇒ expect.find(e.contains(_)).isDefined)
       val errors = List(
+        (if (r.exception.isDefined) "Exception during compilation: " + r.exception.get else ""),
         (if (!expectedButNotFound.isEmpty) "Missing compilation warning: " + expectedButNotFound.mkString(", ") else ""),
         (if (!unexpected.isEmpty || !r.compileErrors.isEmpty) "Unexpected compilation errors/warnings: " + (r.compileErrors ::: unexpected).mkString(", ") else "")).mkString(". ")
-      MatchResult(r.compileErrors.isEmpty && expectedButNotFound.isEmpty && unexpected.isEmpty, errors, "NOT " + errors)
+      MatchResult(r.compileErrors.isEmpty && expectedButNotFound.isEmpty && unexpected.isEmpty && r.exception.isEmpty, errors, "NOT " + errors)
     }
   }
 
