@@ -11,6 +11,7 @@ trait PuscaDefinitions {
     val sideEffect = definitions.getClass("pusca.sideEffect")
     val pure = definitions.getClass("pusca.pure")
     val impure = definitions.getClass("pusca.impure")
+    val declarePure = definitions.getClass("pusca.declarePure")
   }
 
   protected def hasAnnotation(tpe: Type, a: Symbol): Boolean = {

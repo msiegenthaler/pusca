@@ -14,7 +14,7 @@ class pure extends PurenessAnnotation
  * It's appropriate to use this annotation on code that guarantees referential transparency but relies
  * on not-pure implementation details such as spawning multiple threads to parallelize the execution.
  */
-class declaredPure extends PurenessAnnotation
+class declarePure extends PurenessAnnotation
 
 /**
  * The pureness of the method depends on the type parameter of the method and the surrounding class. An example

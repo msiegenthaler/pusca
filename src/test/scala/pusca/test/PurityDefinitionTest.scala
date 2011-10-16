@@ -49,7 +49,7 @@ class PurityDefinitionTest extends JUnitSuite with ShouldMatchersForJUnit {
   @Test def defDeclarePureOnPure {
     val w = PluginTester("@declarePure def dp(a: Int) = a").warnings
     w should have size (1)
-    w.head should include("@declarePure is unnecessary, function is pure")
+    w.head should include("@declarePure is unnecessary, function 'dp' is pure")
   }
   @Test def defDeclarePureOnImpure {
     val w = PluginTester("""
