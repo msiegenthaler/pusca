@@ -11,6 +11,7 @@ class PurePlugin(val global: Global) extends Plugin {
   val description = "Enforces pureness"
   val components = List[PluginComponent]( //
 //    ShowTreeComponent, //
+    new RemoveSideEffectInsideImpureComponent(global),
     new DeclarationConflictDetectorComponent(global),
     new UnnecessaryDeclarePureComponent(global),
     new ForbiddenSideEffectAssignmentComponent(global),
@@ -24,8 +25,8 @@ class PurePlugin(val global: Global) extends Plugin {
   import global._
   private object ShowTreeComponent extends PluginComponent {
     val global: PurePlugin.this.global.type = PurePlugin.this.global
-    override val runsAfter = List("methodReturnTypeAnnotator")
-    override val runsRightAfter = Some("methodReturnTypeAnnotator")
+    override val runsAfter = List("removeSideEffectInsideImpure")
+    override val runsRightAfter = Some("removeSideEffectInsideImpure")
     val phaseName = "showTree"
     def newPhase(_prev: Phase) = new ShowTreePhase(_prev)
 

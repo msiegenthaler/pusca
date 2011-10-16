@@ -4,7 +4,7 @@ import scala.tools.nsc.Global
 trait ParserStageSupport {
   val global: Global
   import global._
-  
+
   protected def annotationName(t: Tree): Option[Name] = t match {
     case Apply(Select(New(Ident(tpe)), method), args) ⇒ Some(tpe)
     case _ ⇒ None
@@ -32,6 +32,14 @@ trait ParserStageSupport {
     case _ ⇒ false
   }
   protected def annotate(t: Tree, a: Symbol): Tree = Annotated(makeAnnotation(a), t)
+
+  protected def deannotate(t: Tree, a: Symbol): Tree = t match {
+    case Annotated(annot, t) ⇒
+      val nt = deannotate(t, a)
+      if (annotationName(annot).filter(sameName(a)).isDefined) nt
+      else Annotated(annot, t)
+    case _ ⇒ t
+  }
 
   protected def isConstructor(d: DefDef) = d.name.toString == "<init>"
 }
