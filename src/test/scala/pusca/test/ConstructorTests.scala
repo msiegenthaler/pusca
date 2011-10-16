@@ -52,7 +52,7 @@ class ConstructorTests extends JUnitSuite with ShouldMatchersForJUnit {
 
   @Test def constructorNotDeclaredImpureMayNotCallImpureFunction {
     code("""
-        @impure def ip(s: Strint) = ()
+        @impure def ip(s: String) = ()
  				trait A { ip("Hi") }
         """) should yieldCompileError("impure function call inside the pure function '<init>'")
   }
