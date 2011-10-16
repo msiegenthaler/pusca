@@ -3,16 +3,14 @@ package plugin
 
 import scala.tools.nsc.Global
 
-abstract class SideEffectChecker {
+abstract class SideEffectChecker extends PuscaDefinitions {
   val global: Global
   import global._
 
   object checker extends AnnotationChecker {
-    private val sideEffectAnnotationType = definitions.getClass("pusca.sideEffect")
-    private def hasSideEffect(tpe: Type) = tpe.annotations.find(_.atp.typeSymbol == sideEffectAnnotationType).isDefined
-    private def sideEffectAnnotation = AnnotationInfo(sideEffectAnnotationType.tpe, Nil, Nil)
-    private def withSideEffect(tpe: Type) = if (hasSideEffect(tpe)) tpe else tpe.withAnnotations(sideEffectAnnotation :: tpe.annotations)
-
+    private def hasSideEffect(tpe: Type) = hasAnnotation(tpe, Annotation.sideEffect)
+    private def withSideEffect(tpe: Type) = annotateWith(tpe, Annotation.sideEffect)
+    
     def annotationsConform(tpe1: Type, tpe2: Type): Boolean = {
       //      println("# conform tp1=" + tpe1 + "    tp2=" + tpe2)
       hasSideEffect(tpe2) || !hasSideEffect(tpe1)
