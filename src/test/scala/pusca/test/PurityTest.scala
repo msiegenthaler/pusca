@@ -10,11 +10,35 @@ import PluginTester._
 class PurityTest extends JUnitSuite with ShouldMatchersForJUnit {
 
   def code(s: String) = {
-    new PluginTester().fromString("@impure def ip(i: Int) = 10").fromString(s).run
+    new PluginTester().fromString("@impure def ip(i: Int): Int @sideEffect = 10").fromString(s).run
   }
 
-  @Test def pureFunctionMustNotCallImpureFunction {
-    code("@pure def a = ip(10)") should yieldCompileError("impure function call inside the pure function 'a'")
+  @Test def pureFunctionMustNotCallImpureFunctionLast {
+    code("@pure def a = ip(10)") should yieldCompileError("Method 'a' has @pure annotation and a @sideEffect return type")
+  }
+
+  @Test def pureFunctionMustNotCallImpureFunctionMiddleWithoutAssignment {
+    code("""
+  	    @pure def a = {
+  	    	ip(10)
+  	    	20
+  			}""") should yieldCompileError("impure function call inside the pure function 'a'")
+  }
+
+  @Test def pureFunctionMustNotCallImpureFunctionMiddleWithAssignment {
+    code("""
+  			@pure def a = {
+  				val a = ip(10)
+  				a + 10
+  			}""") should yieldCompileError("impure function call inside the pure function 'a'")
+  }
+
+  @Test def pureFunctionMustNotCallImpureFunctionMiddleWithAssignment2 {
+    code("""
+  			@pure def a = {
+  				val a: Int = ip(10)
+  				a + 10
+  			}""") should yieldCompileError("impure function call inside the pure function 'a'")
   }
 
   @Test def pureFunctionMayCallAPureFunctions {
