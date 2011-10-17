@@ -31,8 +31,6 @@ class RemoveInferedSideEffectFromValComponent(val global: Global) extends Plugin
       //val/var without explicitly specified type
       case v @ ValDef(_, _, TypeTree(), ApplySideEffectFun(_)) ⇒
         super.transform(v)
-      case v @ ValDef(_, _, TypeTree(), Apply(_, _)) ⇒
-        super.transform(v) //apply will get handled anyway
       case v @ ValDef(_, _, TypeTree(), rhs) ⇒
         v.copy(rhs = applySideEffect(transform(rhs)))
 
