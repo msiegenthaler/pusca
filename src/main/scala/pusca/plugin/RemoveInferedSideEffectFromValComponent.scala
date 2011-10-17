@@ -43,6 +43,4 @@ class RemoveInferedSideEffectFromValComponent(val global: Global) extends Plugin
       case other ⇒ super.transform(other)
     }
   }
-
-  //TODO remove unused calls in a later phase (after the typer)
 }
