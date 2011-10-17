@@ -14,17 +14,32 @@ class RemoveInferedSideEffectFromValComponent(val global: Global) extends Plugin
   def newTransformer(unit: CompilationUnit) = new RemoveInferedSideEffectFromVal
 
   class RemoveInferedSideEffectFromVal extends Transformer {
-    protected def applySideEffectFun = Select(Select(Ident("pusca"), "package"), "applySideEffect")
+    protected def applySideEffectFun = Select(Ident("pusca"), "applySideEffect")
     protected def applySideEffect(v: Tree) = Apply(applySideEffectFun, v :: Nil)
 
+    protected object ApplySideEffectFun {
+      def unapply(t: Tree) = t match {
+        case Apply(Select(Select(Ident(p), pko), mn), arg :: Nil) if p == stringToTermName("pusca") && pko == stringToTermName("package") && mn == stringToTermName("applySideEffect") ⇒
+          Some(arg)
+        case Apply(Select(Ident(p), mn), arg :: Nil) if p == stringToTermName("pusca") && mn == stringToTermName("applySideEffect") ⇒
+          Some(arg)
+        case _ ⇒ None
+      }
+    }
+
     override def transform(tree: Tree): Tree = tree match {
-      //handle calls inside impure
-      case v @ ValDef(_, _, TypeTree(), rhs) ⇒ //val/var without explicitly specified type
+      //val/var without explicitly specified type
+      case v @ ValDef(_, _, TypeTree(), ApplySideEffectFun(_)) ⇒
+        super.transform(v)
+      case v @ ValDef(_, _, TypeTree(), Apply(_, _)) ⇒
+        super.transform(v) //apply will get handled anyway
+      case v @ ValDef(_, _, TypeTree(), rhs) ⇒
         v.copy(rhs = applySideEffect(transform(rhs)))
 
-      case Apply(Apply(applySideEffectFun, _), args) ⇒ //method call to applySideEffect
-        super.transform(tree)
-      case Apply(fun, args) ⇒ // method calls
+      //method calls
+      case a @ ApplySideEffectFun(_) ⇒ //method call to applySideEffect
+        super.transform(a)
+      case Apply(fun, args) ⇒ // other method calls
         Apply(transform(fun), args.map(transform).map(applySideEffect))
 
       case other ⇒ super.transform(other)
