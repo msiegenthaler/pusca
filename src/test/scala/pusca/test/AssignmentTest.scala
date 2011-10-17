@@ -90,23 +90,45 @@ class AssignmentTest extends JUnitSuite with ShouldMatchersForJUnit {
   			""") should compile
   }
 
-  @Test def callFunctionWithParameterFromImpureInsideImpure2 {
+  @Test def callFunctionWithParameterFromImpureInsideImpureValWithoutType {
     code("""
   			@impure def c(i: Int): Int = 100
         def twice(i: Int) = i * 2
   			@impure def b = {
-        	val x = twice(c(10))
+        	val x = pusca.applySideEffect(twice(c(10)))
         	x
   			}
   			""") should compile
   }
   
-  @Test def callFunctionWithParameterFromImpureInsideImpure3 {
+  @Test def callFunctionWithParameterFromImpureInsideImpureValWithType {
     code("""
   			@impure def c(i: Int): Int = 100
         def twice(i: Int) = i * 2
   			@impure def b = {
         	val x: Int = twice(c(10))
+        	x
+  			}
+  			""") should compile
+  }
+  
+  @Test def callFunctionWithParameterFromImpureInsideImpureVarWithType {
+  	code("""
+  			@impure def c(i: Int): Int = 100
+  			def twice(i: Int) = i * 2
+  			@impure def b = {
+  			var x = twice(c(10))
+  			x
+  			}
+  	""") should compile
+  }
+  
+  @Test def callFunctionWithParameterFromImpureInsideImpureVarWithoutType {
+    code("""
+  			@impure def c(i: Int): Int = 100
+        def twice(i: Int) = i * 2
+  			@impure def b = {
+        	var x = twice(c(10))
         	x
   			}
   			""") should compile
