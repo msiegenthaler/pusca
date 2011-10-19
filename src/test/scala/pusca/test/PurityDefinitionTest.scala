@@ -15,8 +15,7 @@ class PurityDefinitionTest extends JUnitSuite with ShouldMatchersForJUnit {
     val a = "@pure def checker = " + call
     val b = "@impure def impureChecker = " + call
     new PluginTester().fromString(definition).fromString(a).fromString(b).run should
-      yieldCompileError("Method 'checker' has @pure annotation and a @sideEffect return type.")
-//    yieldCompileError("impure function call inside the pure function 'checker'")
+      yieldCompileError("impure method call inside the pure method 'checker'")
   }
 
   @Test def defPureFunctionImplicit {
@@ -36,14 +35,14 @@ class PurityDefinitionTest extends JUnitSuite with ShouldMatchersForJUnit {
     assertImpure("def ip(a: Int): Int @sideEffect = 10", "ip(20)")
   }
   @Test def defImpureFunctionImplicitThroughLastStatement {
-    assertImpure("""
+  	code("""
   		def ip(a: String): Unit @sideEffect = ()
-  	    def ip2(a: String) = ip(a)""", "ip2(\"Hi\")")
+  	  def ip2(a: String) = ip(a)""") should yieldCompileError("impure method call inside the pure method 'ip2'")
   }
   @Test def defImpureFunctionImplicitThroughLastStatement2 {
-    assertImpure("""
+    code("""
   		@impure def ip(a: String): Unit = ()
-  	  	def ip2(a: String) = ip(a)""", "ip2(\"Hi\")")
+  	  def ip2(a: String) = ip(a)""") should yieldCompileError("impure method call inside the pure method 'ip2'")
   }
 
   @Test def defDeclarePureOnPure {
@@ -89,7 +88,7 @@ class PurityDefinitionTest extends JUnitSuite with ShouldMatchersForJUnit {
     code("""
         @impure def a: Int = 10
         def b = a
-        @pure def c = b""") should yieldCompileError("Method 'c' has @pure annotation and a @sideEffect return type.")
+        @pure def c = b""") should yieldCompileError("impure method call inside the pure method 'b'")
   }
 
 }
