@@ -35,9 +35,9 @@ trait PuscaDefinitions {
     }
   }
 
-  object ImpureDefDef {
+  object PureDefDef {
     def unapply(t: Tree) = t match {
-      case d @ DefDef(mods, name, tparams, vparams, tpt, rhs) if (!hasAnnotation(tpt.tpe, Annotation.sideEffect)) ⇒
+      case d @ DefDef(mods, name, tparams, vparams, tpt, rhs) if !hasAnnotation(tpt.tpe, Annotation.sideEffect) && !d.symbol.isGetter && !d.symbol.isSetter ⇒
         Some(d)
       case _ ⇒ None
     }
