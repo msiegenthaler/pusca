@@ -22,7 +22,7 @@ class DeclarationConflictDetectorComponent(val global: Global) extends PluginCom
       def handle(t: Tree): Unit = {
         t match {
           case d: DefDef if isAnnotPure(d) && hasAnnotation(d.tpt.tpe, Annotation.sideEffect) ⇒
-            reporter.error(d.pos, "Method '" + d.name + "' has @pure annotation and a @sideEffect return type.")
+            reporter.error(d.pos, "method '" + d.name + "' has @pure annotation and a @sideEffect return type")
           case _ ⇒ ()
         }
         t.children.foreach(handle)
