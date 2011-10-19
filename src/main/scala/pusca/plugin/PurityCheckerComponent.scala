@@ -5,10 +5,13 @@ import scala.tools.nsc.Global
 import scala.tools.nsc.Phase
 import scala.tools.nsc.symtab.Flags
 
+/**
+ * Checks for applySideEffect calls inside pure methods and yields compiler error if they are found.
+ */
 class PurityCheckerComponent(val global: Global) extends PluginComponent with PuscaDefinitions {
   import global._
 
-  val runsAfter = List("typer", "removeUnnecessaryApplySideEffect", "forbiddenSideEffectAssignment")
+  val runsAfter = List("typer", "removeUnnecessaryApplySideEffect", "forbiddenSideEffectAssignment", "purityDeclarationConflictDetector")
   val phaseName = "purityChecker"
   def newPhase(prev: Phase) = new PurityChecker(prev)
 
@@ -17,22 +20,18 @@ class PurityCheckerComponent(val global: Global) extends PluginComponent with Pu
     override def apply(unit: CompilationUnit) {
       def handle(t: Tree): Unit = t match {
         case ImpureDefDef(d) ⇒
-          println("## found pure method " + d.name)
           handlePureMethod(d.symbol)(d.rhs)
         case other ⇒
           other.children.foreach(handle)
       }
       def handlePureMethod(fun: Symbol)(t: Tree): Unit = t match {
         case a @ ApplySideEffect(impure) ⇒
-          println("#### impure function call inside the pure method '" + fun.fullName + "'")
-          reporter.error(a.pos, "impure function call inside the pure method '" + fun.fullName + "'")
+          reporter.error(a.pos, "impure method call inside the pure method '" + fun.fullName + "'")
         case d: DefDef   ⇒ handle(d)
         case c: ClassDef ⇒ handle(c)
         case other       ⇒ other.children.foreach(handlePureMethod(fun))
       }
-      println("doing " + unit)
       handle(unit.body)
-      println("done " + unit)
     }
   }
 }
