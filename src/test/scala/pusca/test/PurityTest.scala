@@ -14,7 +14,11 @@ class PurityTest extends JUnitSuite with ShouldMatchersForJUnit {
   }
 
   @Test def pureFunctionMustNotCallImpureFunctionLast {
-    code("@pure def a = ip(10)") should yieldCompileError("Method 'a' has @pure annotation and a @sideEffect return type")
+    code("@pure def a = ip(10)") should yieldCompileError("impure method call inside the pure method 'a'")
+  }
+
+  @Test def pureFunctionMustNotCallImpureFunctionLast2 {
+    code("@pure def a: Int = ip(10)") should yieldCompileError("impure method call inside the pure method 'a'")
   }
 
   @Test def pureFunctionMustNotCallImpureFunctionMiddleWithoutAssignment {
@@ -22,7 +26,7 @@ class PurityTest extends JUnitSuite with ShouldMatchersForJUnit {
   	    @pure def a = {
   	    	ip(10)
   	    	20
-  			}""") should yieldCompileError("impure function call inside the pure function 'a'")
+  			}""") should yieldCompileError("impure method call inside the pure method 'a'")
   }
 
   @Test def pureFunctionMustNotCallImpureFunctionMiddleWithAssignment {
@@ -30,7 +34,7 @@ class PurityTest extends JUnitSuite with ShouldMatchersForJUnit {
   			@pure def a = {
   				val a = ip(10)
   				a + 10
-  			}""") should yieldCompileError("impure function call inside the pure function 'a'")
+  			}""") should yieldCompileError("impure method call inside the pure method 'a'")
   }
 
   @Test def pureFunctionMustNotCallImpureFunctionMiddleWithAssignment2 {
@@ -38,7 +42,7 @@ class PurityTest extends JUnitSuite with ShouldMatchersForJUnit {
   			@pure def a = {
   				val a: Int = ip(10)
   				a + 10
-  			}""") should yieldCompileError("impure function call inside the pure function 'a'")
+  			}""") should yieldCompileError("impure method call inside the pure method 'a'")
   }
 
   @Test def pureFunctionMayCallAPureFunctions {
@@ -76,7 +80,7 @@ class PurityTest extends JUnitSuite with ShouldMatchersForJUnit {
   	       var x: Int = 0
   			   @pure def a = x
          }
-  	  """) should yieldCompileError("access to non-local var inside the pure function 'a'")
+  	  """) should yieldCompileError("access to non-local var inside the pure method 'a'")
   }
 
   @Test def pureFunctionMustNotModifyVars {
@@ -85,7 +89,7 @@ class PurityTest extends JUnitSuite with ShouldMatchersForJUnit {
   			  var x: Int = 0
   			  @pure def a(i: Int) { x = i }
   			 }
-  	  """) should yieldCompileError("write to non-local var inside the pure function 'a'")
+  	  """) should yieldCompileError("write to non-local var inside the pure method 'a'")
   }
 
   @Test def pureFunctionMustNotAccessVarInOtherClasses {
@@ -94,7 +98,7 @@ class PurityTest extends JUnitSuite with ShouldMatchersForJUnit {
         class B {
         	@pure def x = A.a + 10
         }
-      """) should yieldCompileError("access to non-local var inside the pure function 'x'")
+      """) should yieldCompileError("access to non-local var inside the pure method 'x'")
   }
 
   @Test def pureFunctionMustNotWriteVarInOtherClasses {
@@ -106,7 +110,7 @@ class PurityTest extends JUnitSuite with ShouldMatchersForJUnit {
         		A.a
     			}
         }
-      """) should yieldCompileError("write to non-local var inside the pure function 'x'")
+      """) should yieldCompileError("write to non-local var inside the pure method 'x'")
   }
 
   @Test def pureFunctionMayAccessVals {
@@ -135,7 +139,7 @@ class PurityTest extends JUnitSuite with ShouldMatchersForJUnit {
           @pure def b = x + 1
         	b
     	  }
-      """) should yieldCompileError("access to non-local var inside the pure function 'b'")
+      """) should yieldCompileError("access to non-local var inside the pure method 'b'")
   }
 
   @Test def pureFunctionMayNotWriteVarsOfOuterFunction {
@@ -146,6 +150,6 @@ class PurityTest extends JUnitSuite with ShouldMatchersForJUnit {
   		  	b
   	    	x
   			}
-  	  """) should yieldCompileError("write to non-local var inside the pure function 'b'")
+  	  """) should yieldCompileError("write to non-local var inside the pure method 'b'")
   }
 }
