@@ -80,7 +80,16 @@ class PurityTest extends JUnitSuite with ShouldMatchersForJUnit {
   	       var x: Int = 0
   			   @pure def a = x
          }
-  	  """) should yieldCompileError("access to non-local var inside the pure method 'a'")
+  	  """) should yieldCompileError("access to non-local var inside the pure method 'A.a'")
+  }
+
+  @Test def pureFunctionMustNotAccessVarsPrivateThis {
+    code("""
+  	     class A {
+  	       private[this] var x: Int = 0
+  			   @pure def a = x
+         }
+  	  """) should yieldCompileError("access to non-local var inside the pure method 'A.a'")
   }
 
   @Test def pureFunctionMustNotModifyVars {
@@ -89,7 +98,16 @@ class PurityTest extends JUnitSuite with ShouldMatchersForJUnit {
   			  var x: Int = 0
   			  @pure def a(i: Int) { x = i }
   			 }
-  	  """) should yieldCompileError("write to non-local var inside the pure method 'a'")
+  	  """) should yieldCompileError("write to non-local var inside the pure method 'A.a'")
+  }
+
+  @Test def pureFunctionMustNotModifyVarsPrivateThis {
+    code("""
+  			 class A {
+  			  private[this] var x: Int = 0
+  			  @pure def a(i: Int) { x = i }
+  			 }
+  	  """) should yieldCompileError("write to non-local var inside the pure method 'A.a'")
   }
 
   @Test def pureFunctionMustNotAccessVarInOtherClasses {
@@ -98,7 +116,7 @@ class PurityTest extends JUnitSuite with ShouldMatchersForJUnit {
         class B {
         	@pure def x = A.a + 10
         }
-      """) should yieldCompileError("access to non-local var inside the pure method 'x'")
+      """) should yieldCompileError("access to non-local var inside the pure method 'B.x'")
   }
 
   @Test def pureFunctionMustNotWriteVarInOtherClasses {
@@ -106,11 +124,11 @@ class PurityTest extends JUnitSuite with ShouldMatchersForJUnit {
         object A { var a = 0 }
         class B {
         	@pure def x = {
-        		A.a = A.a + 1
-        		A.a
+        		A.a = 1
+        		2
     			}
         }
-      """) should yieldCompileError("write to non-local var inside the pure method 'x'")
+      """) should yieldCompileError("write to non-local var inside the pure method 'B.x'")
   }
 
   @Test def pureFunctionMayAccessVals {
@@ -146,10 +164,20 @@ class PurityTest extends JUnitSuite with ShouldMatchersForJUnit {
     code("""
   			@pure def a = {
   			  var x = 10
-  		  	@pure def b { x = x + 1 }
+  		  	@pure def b { x = 1 }
   		  	b
   	    	x
   			}
   	  """) should yieldCompileError("write to non-local var inside the pure method 'b'")
+  }
+
+  @Test def pureFunctionMayAccessValsOfOuterFunction {
+    code("""
+        @pure def a = {
+          val x = 10
+          @pure def b = x + 1
+        	b
+    	  }
+      """) should compile
   }
 }
