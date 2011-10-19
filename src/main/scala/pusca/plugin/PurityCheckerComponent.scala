@@ -27,6 +27,11 @@ class PurityCheckerComponent(val global: Global) extends PluginComponent with Pu
       def handlePureMethod(fun: Symbol)(t: Tree): Unit = t match {
         case a @ ApplySideEffect(impure) ⇒
           reporter.error(a.pos, "impure method call inside the pure method '" + fun.fullName + "'")
+        case a @ Assign(lhs, rhs) if (!lhs.symbol.ownerChain.contains(fun)) ⇒ // assign to var outside the scope of this method
+          reporter.error(a.pos, "write to non-local var inside the pure method '" + fun.fullName + "'")
+        case s: Select if s.symbol.isMutable && !s.symbol.ownerChain.contains(fun) ⇒ // read of var outside the scope of this method
+          reporter.error(s.pos, "access to non-local var inside the pure method '" + fun.fullName + "'")
+
         case d: DefDef   ⇒ handle(d)
         case c: ClassDef ⇒ handle(c)
         case other       ⇒ other.children.foreach(handlePureMethod(fun))
