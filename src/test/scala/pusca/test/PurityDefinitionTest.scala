@@ -15,7 +15,7 @@ class PurityDefinitionTest extends JUnitSuite with ShouldMatchersForJUnit {
     val a = "@pure def checker = " + call
     val b = "@impure def impureChecker = " + call
     new PluginTester().fromString(definition).fromString(a).fromString(b).run should
-      yieldCompileError("impure method call inside the pure method 'checker'")
+      yieldCompileError("method 'checker' has @pure annotation and a @sideEffect return type")
   }
 
   @Test def defPureFunctionImplicit {
@@ -80,7 +80,7 @@ class PurityDefinitionTest extends JUnitSuite with ShouldMatchersForJUnit {
 
   @Test def conflictingAnnotationsYieldError {
     code("@pure def a: Int @sideEffect = 10") should
-      yieldCompileError("Method 'a' has @pure annotation and a @sideEffect return type.")
+      yieldCompileError("method 'a' has @pure annotation and a @sideEffect return type")
   }
 
   @Test def impureImpliesSideEffectReturnType {
@@ -89,7 +89,7 @@ class PurityDefinitionTest extends JUnitSuite with ShouldMatchersForJUnit {
     code("""
         @impure def a: Int = 10
         def b = a
-        @pure def c = b""") should yieldCompileError("impure method call inside the pure method 'b'")
+        @pure def c = b""") should yieldCompileError("method 'c' has @pure annotation and a @sideEffect return type")
   }
 
 }
