@@ -41,7 +41,7 @@ class ApplySideEffectComponent(val global: Global) extends PluginComponent with 
         val body = t.body.map(handleStatementBlock)
         treeCopy.Template(t, t.parents, t.self, body)
       case d: DefDef ⇒
-        val rhs = handleStatementBlock(d.rhs)
+        val rhs = handleMethodReturnBlock(d.rhs)
         treeCopy.DefDef(d, d.mods, d.name, d.tparams, d.vparamss, d.tpt, rhs)
       case v: ValDef ⇒
         val rhs = handleStatementBlock(v.rhs)
@@ -55,7 +55,10 @@ class ApplySideEffectComponent(val global: Global) extends PluginComponent with 
     }
 
     protected def handleStatementBlock(t: Tree): Tree = t match {
-      case a @ ApplySideEffectFun(args) ⇒ //method call to applySideEffect
+      case ApplySideEffectFun(a @ Apply(fun, args)) ⇒ //method call to applySideEffect with nested apply
+        val na = treeCopy.Apply(a, fun, args.map(handleStatementBlock))
+        applySideEffect(na)
+      case a @ ApplySideEffectFun(args) ⇒ //method call to applySideEffect without nested apply
         a
       case a @ Apply(Select(Super(_, _), n), _) if n == stringToTermName("<init>") ⇒ // don't do anything with super.<init>
         a
@@ -65,6 +68,21 @@ class ApplySideEffectComponent(val global: Global) extends PluginComponent with 
 
       case i: Ident ⇒ //only the outermost
         applySideEffect(i)
+
+      case other ⇒ findStatementBlock(other)
+    }
+
+    protected def handleMethodReturnBlock(t: Tree): Tree = t match {
+      case b: Block ⇒
+        val expr = handleMethodReturnBlock(b.expr)
+        val stats = b.stats.map(handleStatementBlock)
+        treeCopy.Block(b, stats, expr)
+
+      case a @ Apply(Select(Super(_, _), n), _) if n == stringToTermName("<init>") ⇒ // don't do anything with super.<init>
+        a
+      case a @ Apply(fun, args) ⇒
+        val nargs = args.map(handleStatementBlock)
+        treeCopy.Apply(a, fun, nargs)
 
       case other ⇒ findStatementBlock(other)
     }
