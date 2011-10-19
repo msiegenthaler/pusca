@@ -18,11 +18,20 @@ trait PuscaDefinitions {
     tpe.annotations.find(_.atp.typeSymbol == a).isDefined
   }
   protected def hasAnnotation(tpe: Symbol, a: Symbol): Boolean = {
-  		tpe.annotations.find(_.atp.typeSymbol == a).isDefined
+    tpe.annotations.find(_.atp.typeSymbol == a).isDefined
   }
-  
   protected def annotateWith(tpe: Type, a: Symbol): Type = {
     if (hasAnnotation(tpe, a)) tpe else tpe.withAnnotations(Annotation(a) :: tpe.annotations)
   }
 
+  protected lazy val puscaPackage = definitions.getModule("pusca")
+  protected lazy val applySideEffectMethod = definitions.getMember(puscaPackage, "applySideEffect")
+
+  object ApplySideEffect {
+    def unapply(t: Tree) = t match {
+      case Apply(TypeApply(Select(Select(Ident(p), pko), mn), _), arg :: Nil) if p == puscaPackage.name && pko == stringToTermName("package") && mn == applySideEffectMethod.name ⇒
+        Some(arg)
+      case _ ⇒ None
+    }
+  }
 }
