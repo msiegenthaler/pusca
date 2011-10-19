@@ -1,0 +1,38 @@
+package pusca.plugin
+
+import scala.tools.nsc.plugins.PluginComponent
+import scala.tools.nsc.Global
+import scala.tools.nsc.Phase
+import scala.tools.nsc.symtab.Flags
+
+class PurityCheckerComponent(val global: Global) extends PluginComponent with PuscaDefinitions {
+  import global._
+
+  val runsAfter = List("typer", "removeUnnecessaryApplySideEffect", "forbiddenSideEffectAssignment")
+  val phaseName = "purityChecker"
+  def newPhase(prev: Phase) = new PurityChecker(prev)
+
+  class PurityChecker(prev: Phase) extends StdPhase(prev) {
+
+    override def apply(unit: CompilationUnit) {
+      def handle(t: Tree): Unit = t match {
+        case ImpureDefDef(d) ⇒
+          println("## found pure method " + d.name)
+          handlePureMethod(d.symbol)(d.rhs)
+        case other ⇒
+          other.children.foreach(handle)
+      }
+      def handlePureMethod(fun: Symbol)(t: Tree): Unit = t match {
+        case a @ ApplySideEffect(impure) ⇒
+          println("#### impure function call inside the pure method '" + fun.fullName + "'")
+          reporter.error(a.pos, "impure function call inside the pure method '" + fun.fullName + "'")
+        case d: DefDef   ⇒ handle(d)
+        case c: ClassDef ⇒ handle(c)
+        case other       ⇒ other.children.foreach(handlePureMethod(fun))
+      }
+      println("doing " + unit)
+      handle(unit.body)
+      println("done " + unit)
+    }
+  }
+}
