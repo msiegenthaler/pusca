@@ -11,7 +11,7 @@ class PurePlugin(val global: Global) extends Plugin {
   val description = "Enforces pureness"
   val components = List[PluginComponent]( //
 //    ShowTreeComponent, //
-    new RemoveInferedSideEffectFromValComponent(global),
+    new ApplySideEffectComponent(global),
     new RemoveUnnecessaryApplySideEffectComponent(global),
     new DeclarationConflictDetectorComponent(global),
     new UnnecessaryDeclarePureComponent(global),

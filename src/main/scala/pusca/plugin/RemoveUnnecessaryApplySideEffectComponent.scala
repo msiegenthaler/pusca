@@ -8,7 +8,7 @@ import scala.tools.nsc.Phase
 class RemoveUnnecessaryApplySideEffectComponent(val global: Global) extends PluginComponent with Transform with PuscaDefinitions with ParserStageSupport {
   import global._
 
-  val runsAfter = List("typer", "removeInferedSideEffectFromVal")
+  val runsAfter = List("typer", "applySideEffect")
   val phaseName = "removeUnnecessaryApplySideEffect"
   def newTransformer(unit: CompilationUnit) = new RemoveUnnecessaryApplySideEffect
 

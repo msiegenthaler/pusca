@@ -5,15 +5,15 @@ import scala.tools.nsc.transform.Transform
 import scala.tools.nsc.Global
 import scala.tools.nsc.Phase
 
-class RemoveInferedSideEffectFromValComponent(val global: Global) extends PluginComponent with Transform with PuscaDefinitions with ParserStageSupport {
+class ApplySideEffectComponent(val global: Global) extends PluginComponent with Transform with PuscaDefinitions with ParserStageSupport {
   import global._
 
   val runsAfter = List("parser", "methodReturnTypeAnnotator")
   override val runsBefore = List("namer")
-  val phaseName = "removeInferedSideEffectFromVal"
-  def newTransformer(unit: CompilationUnit) = new RemoveInferedSideEffectFromVal
+  val phaseName = "applySideEffect"
+  def newTransformer(unit: CompilationUnit) = new ApplySideEffect
 
-  class RemoveInferedSideEffectFromVal extends Transformer {
+  class ApplySideEffect extends Transformer {
     protected def applySideEffectFun = Select(Ident("pusca"), "applySideEffect")
     protected def applySideEffect(v: Tree) = {
       val a = Apply(applySideEffectFun, v :: Nil)
@@ -66,43 +66,4 @@ class RemoveInferedSideEffectFromValComponent(val global: Global) extends Plugin
       case other ⇒ findStatementBlock(other)
     }
   }
-
-  //    private var inRelevant = false
-  //    private def isRelevant: Boolean = inRelevant
-  //    private def relevant[A](f: ⇒ A): A = {
-  //      inRelevant = true
-  //      val r = f
-  //      inRelevant = false
-  //      r
-  //    }
-  //
-  //    override def transform(tree: Tree): Tree = tree match {
-  //      case d: DefDef ⇒
-  //        val nrhs = relevant(transform(d.rhs))
-  //        d.copy(rhs = nrhs)
-  //      case c: ClassDef ⇒
-  //        c.copy(impl = transform(c.impl).asInstanceOf[Template])
-  //      case t: Template ⇒
-  //        val nb = relevant(t.body.map(transform))
-  //        t.copy(body = nb)
-  //      case b: Block ⇒ relevant {
-  //        b.copy(expr = transform(b.expr), stats = b.stats.map(transform))
-  //      }
-  //
-  //      //val/var without explicitly specified type
-  //      case v @ ValDef(_, _, TypeTree(), ApplySideEffectFun(_)) if isRelevant ⇒
-  //        super.transform(v)
-  //      case v @ ValDef(_, _, TypeTree(), rhs) if isRelevant ⇒
-  //        v.copy(rhs = applySideEffect(transform(rhs)))
-  //
-  //      //method calls
-  //      case a @ ApplySideEffectFun(_) ⇒ //method call to applySideEffect
-  //        super.transform(a)
-  //      case Apply(fun, args) if isRelevant ⇒ // other method calls
-  //        applySideEffect(Apply(transform(fun), args.map(transform).map(applySideEffect)))
-  //
-  //      case other ⇒
-  //        super.transform(other)
-  //    }
-  //  }
 }
