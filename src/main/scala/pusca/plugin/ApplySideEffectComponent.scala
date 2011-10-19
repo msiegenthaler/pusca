@@ -5,6 +5,9 @@ import scala.tools.nsc.transform.Transform
 import scala.tools.nsc.Global
 import scala.tools.nsc.Phase
 
+/**
+ * Inserts calls to applySideEffect (converts A @sideEffect to A) on all method calls.
+ */
 class ApplySideEffectComponent(val global: Global) extends PluginComponent with Transform with PuscaDefinitions with ParserStageSupport {
   import global._
 
