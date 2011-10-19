@@ -34,17 +34,18 @@ class PurityDefinitionTest extends JUnitSuite with ShouldMatchersForJUnit {
   @Test def defImpureFunctionSideEffectInt {
     assertImpure("def ip(a: Int): Int @sideEffect = 10", "ip(20)")
   }
+  
   @Test def defImpureFunctionImplicitThroughLastStatement {
-  	code("""
+    assertImpure("""
   		def ip(a: String): Unit @sideEffect = ()
-  	  def ip2(a: String) = ip(a)""") should yieldCompileError("impure method call inside the pure method 'ip2'")
+  	    def ip2(a: String) = ip(a)""", "ip2(\"Hi\")")
   }
   @Test def defImpureFunctionImplicitThroughLastStatement2 {
-    code("""
+    assertImpure("""
   		@impure def ip(a: String): Unit = ()
-  	  def ip2(a: String) = ip(a)""") should yieldCompileError("impure method call inside the pure method 'ip2'")
+  	  	def ip2(a: String) = ip(a)""", "ip2(\"Hi\")")
   }
-
+  
   @Test def defDeclarePureOnPure {
     val w = PluginTester("@declarePure def dp(a: Int) = a").warnings
     w should have size (1)
