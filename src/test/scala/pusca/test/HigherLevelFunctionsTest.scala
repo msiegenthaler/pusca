@@ -38,7 +38,7 @@ class HigherLevelFunctionsTest extends JUnitSuite with ShouldMatchersForJUnit {
   			@pure def x = {
   				m(p(2, _))
   			}
-  	""") should yieldCompileError("type mismatch")
+  	""") should yieldCompileError("impure method call inside the pure method 'x'")
   }
 
   @Test def functionWithSideEffectCannotBeEvaluatedInsidePureFunctionLast {
@@ -127,7 +127,6 @@ class HigherLevelFunctionsTest extends JUnitSuite with ShouldMatchersForJUnit {
   			@pure def x = m(new LengthFunI)
   		""") should yieldCompileError("no type parameters for method m")
   }
-  
   @Test def functionWithTypeParameterIncludesPurenessOnImpureWithClass4 {
     code("""
   			def m[A](f: String => A): A = f("Hello")
@@ -227,7 +226,7 @@ class HigherLevelFunctionsTest extends JUnitSuite with ShouldMatchersForJUnit {
   			def m[A](f: String => A): A = f("Hello")
   			@impure def il(i: String) = i.length
   			@pure def x = m(s => il(s))
-  		""") should yieldCompileError("impure function call inside the pure function 'x'")
+  		""") should yieldCompileError("impure method call inside the pure method 'x'")
   }
   
   @Test def pureFunctionWithParameterThatIsNotAReturnValueAcceptsPure {
@@ -252,20 +251,20 @@ class HigherLevelFunctionsTest extends JUnitSuite with ShouldMatchersForJUnit {
   
   @Test def pureFunctionWithParameterDeclaredSideEffectAcceptsPure {
     code("""
-        @pure def m[A <: Any @sideEffect](f: String => A): Unit = ()
+        @pure def m[A](f: String => A): Unit = ()
         @pure def x = m(_.length)
       """) should compile
   }
   @Test def pureFunctionWithParameterDeclaredSideEffectAcceptsImpure {
     code("""
-        @pure def m[A <: Any @sideEffect](f: String => A): Unit = ()
+        @pure def m[A](f: String => A): Unit = ()
     		@impure def l(s: String) = s.length
         @pure def x = m(l _)
       """) should compile
   }
   @Test def pureFunctionWithParameterDeclaredSideEffectCannotEvaluateIt {
     code("""
-        @pure def m[A <: Any @sideEffect](f: String => A): Unit = f("hi")
-      """) should yieldCompileError("impure function call inside the pure function 'm'")
+        @pure def m[A](f: String => A): Unit = f("hi")
+      """) should compile
   }
 }

@@ -50,6 +50,9 @@ class ApplySideEffectComponent(val global: Global) extends PluginComponent with 
         val expr = handleStatementBlock(b.expr)
         val stats = b.stats.map(handleStatementBlock)
         treeCopy.Block(b, stats, expr)
+        
+      case f @ Function(_, body) =>
+        treeCopy.Function(f, f.vparams, handleStatementBlock(body))
 
       case other ⇒ super.transform(other)
     }
