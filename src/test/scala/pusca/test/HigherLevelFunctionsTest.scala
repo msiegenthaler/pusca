@@ -6,7 +6,6 @@ import org.junit.Test
 import PluginTester._
 
 class HigherLevelFunctionsTest extends JUnitSuite with ShouldMatchersForJUnit {
-
   @Test def functionWithSideEffectIsNotCompatibleWithPure {
     code("""
         @pure def m(f: String => Int) = {
@@ -14,9 +13,9 @@ class HigherLevelFunctionsTest extends JUnitSuite with ShouldMatchersForJUnit {
     		}
         @impure def p(s: String) = s.length
     		@pure def x = {
-        	m(p)
+        	m(p _)
     		}
-      """) should yieldCompileError("impure function call inside the pure function x")
+      """) should yieldCompileError("type mismatch")
   }
   
   @Test def functionWithSideEffectIsNotCompatibleWithPurePartialApplication {
@@ -26,9 +25,9 @@ class HigherLevelFunctionsTest extends JUnitSuite with ShouldMatchersForJUnit {
   			}
   			@impure def p(i: Int)(s: String) = s.length * i
   			@pure def x = {
-  				m(p(2))
+  				m(p(2) _)
   			}
-  	""") should yieldCompileError("impure function call inside the pure function x")
+  	""") should yieldCompileError("type mismatch")
   }
   @Test def functionWithSideEffectIsNotCompatibleWithPurePartialApplication2 {
   	code("""
@@ -39,14 +38,24 @@ class HigherLevelFunctionsTest extends JUnitSuite with ShouldMatchersForJUnit {
   			@pure def x = {
   				m(p(2, _))
   			}
-  	""") should yieldCompileError("impure function call inside the pure function x")
+  	""") should yieldCompileError("type mismatch")
   }
 
-  @Test def functionWithSideEffectCannotBeEvaluatedInsidePureFunction {
+  @Test def functionWithSideEffectCannotBeEvaluatedInsidePureFunctionLast {
     code("""
         @pure def m(f: String => Unit @sideEffect): Unit = f("Hi")
-      """) should yieldCompileError("impure function call inside the pure function m")
+      """) should yieldCompileError("type mismatch")
   }
+
+  @Test def functionWithSideEffectCannotBeEvaluatedInsidePureFunctionMiddle {
+    code("""
+        @pure def m(f: String => Unit @sideEffect): Unit = {
+        	f("Hi")
+        	()
+    		}
+      """) should yieldCompileError("impure method call inside the pure method 'm'")
+  }
+
   @Test def functionWithSideEffectCanBePassedToPureFunction {
     code("""
         @pure def m(f: String => Unit @sideEffect): String = "Hi"
@@ -57,14 +66,14 @@ class HigherLevelFunctionsTest extends JUnitSuite with ShouldMatchersForJUnit {
     code("""
         @impure def m(f: String => Int @sideEffect) = f("Hi")
         @impure def l(f: String) = f.length
-        @impure def x = m(l)
+        @impure def x = m(l _)
       """) should compile
   }
   @Test def functionWithSideEffectIsCompatibleWithPure {
   	code("""
   			@impure def m(f: String => Int @sideEffect) = f("Hi")
   			@pure def l(f: String) = f.length
-  			@impure def x = m(l)
+  			@impure def x = m(l _)
   	""") should compile
   }
 
@@ -94,15 +103,32 @@ class HigherLevelFunctionsTest extends JUnitSuite with ShouldMatchersForJUnit {
   		""") should compile
   }
 
-  @Test def functionWithTypeParameterIncludesPurenessOnImpureWithClass {
+	@Test def functionWithTypeParameterIncludesPurenessOnImpureWithClass1 {
+		code("""
+				def m[A](f: String => A): A = f("Hello")
+				@impure def il(i: Int): Int @sideEffect = i + i
+				class LengthFunI extends Function1[String,Int @sideEffect] { override def apply(s: String) = il(s.length) }
+				@pure def x = m[Int @sideEffect](new LengthFunI)
+		""") should yieldCompileError("method 'x' has @pure annotation and a @sideEffect return type")
+	}
+  @Test def functionWithTypeParameterIncludesPurenessOnImpureWithClass2 {
+    code("""
+  			def m[A](f: String => A): A = f("Hello")
+        @impure def il(i: Int) = i + i
+  	    class LengthFunI extends Function1[String,Int @sideEffect] { override def apply(s: String) = il(s.length) }
+  			@pure def x = m[Int @sideEffect](new LengthFunI)
+  		""") should yieldCompileError("method 'x' has @pure annotation and a @sideEffect return type")
+  }
+  @Test def functionWithTypeParameterIncludesPurenessOnImpureWithClass3 {
     code("""
   			def m[A](f: String => A): A = f("Hello")
         @impure def il(i: Int) = i + i
   	    class LengthFunI extends Function1[String,Int @sideEffect] { override def apply(s: String) = il(s.length) }
   			@pure def x = m(new LengthFunI)
-  		""") should yieldCompileError("impure function call inside the pure function 'x'")
+  		""") should yieldCompileError("no type parameters for method m")
   }
-  @Test def functionWithTypeParameterIncludesPurenessOnImpureWithClass2 {
+  
+  @Test def functionWithTypeParameterIncludesPurenessOnImpureWithClass4 {
     code("""
   			def m[A](f: String => A): A = f("Hello")
   			@impure def il(i: Int) = i + i
@@ -111,22 +137,91 @@ class HigherLevelFunctionsTest extends JUnitSuite with ShouldMatchersForJUnit {
   	    	m(new LengthFunI)
   	    	"Huhu"
   			}
-  		""") should yieldCompileError("impure function call inside the pure function 'x'")
+  		""") should yieldCompileError("no type parameters for method m")
   }
-  @Test def functionWithTypeParameterIncludesPurenessOnImpureWithAnon {
+
+  @Test def functionWithTypeParameterIncludesPurenessOnImpureWithAnonAndExplicit {
     code("""
   			def m[A](f: String => A): A = f("Hello")
   			@impure def il(i: String) = i.length
-  			@pure def x = m(il)
-  		""") should yieldCompileError("impure function call inside the pure function 'x'")
+  			@pure def x = m[Int @sideEffect](il _)
+  		""") should yieldCompileError("method 'x' has @pure annotation and a @sideEffect return type")
+  }
+  @Test def functionWithTypeParameterIncludesPurenessOnImpureWithAnonMiddleExplicit {
+    code("""
+  			def m[A](f: String => A): A = f("Hello")
+  			@impure def il(i: String) = i.length
+  			@pure def x = {
+        	m[Int @sideEffect](il _)
+        	10
+    		}
+  		""") should yieldCompileError("impure method call inside the pure method 'x'")
+  }
+  @Test def functionWithTypeParameterIncludesPurenessOnImpureWithAnon {
+  	code("""
+  			def m[A](f: String => A): A = f("Hello")
+  			@impure def il(i: String) = i.length
+  			@pure def x = m(il _)
+  	""") should yieldCompileError("method 'x' has @pure annotation and a @sideEffect return type")
+  }
+
+  @Test def functionWithTypeParameterIncludesPurenessOnImpureWithAnonMiddle {
+    code("""
+  			def m[A](f: String => A): A = f("Hello")
+  			@impure def il(i: String) = i.length
+  			@pure def x = {
+        	m(x => il(x))
+        	10
+    		}
+  		""") should yieldCompileError("impure method call inside the pure method 'x'")
+  }
+
+  @Test def functionWithTypeParameterIncludesPurenessOnImpureWithAnonAndUnitExplicit {
+    code("""
+  			def m[A](f: String => A): A = f("Hello")
+  			@impure def il(i: String) = ()
+  			@pure def x = m[Unit @sideEffect](il _)
+  		""") should yieldCompileError(" method 'x' has @pure annotation and a @sideEffect return type")
   }
   @Test def functionWithTypeParameterIncludesPurenessOnImpureWithAnonAndUnit {
     code("""
   			def m[A](f: String => A): A = f("Hello")
   			@impure def il(i: String) = ()
-  			@pure def x = m(il)
-  		""") should yieldCompileError("impure function call inside the pure function 'x'")
+  			@pure def x = m(il _)
+  		""") should yieldCompileError(" method 'x' has @pure annotation and a @sideEffect return type")
   }
+  @Test def functionWithTypeParameterIncludesPurenessOnImpureWithAnonAndUnitMiddleExplicit {
+    code("""
+  			def m[A](f: String => A): A = f("Hello")
+  			@impure def il(i: String) = ()
+  			@pure def x = {
+  				m[Unit @sideEffect](il _)
+  				10
+  			}
+  		""") should yieldCompileError(" method 'x' has @pure annotation and a @sideEffect return type")
+  }
+  @Test def functionWithTypeParameterIncludesPurenessOnImpureWithAnonAndUnitMiddle {
+    code("""
+  			def m[A](f: String => A): A = f("Hello")
+  			@impure def il(i: String) = ()
+  			@pure def x = {
+  				m(il _)
+  				10
+  			}
+  		""") should yieldCompileError(" method 'x' has @pure annotation and a @sideEffect return type")
+  }
+  
+  @Test def functionWithTypeParameterIncludesPurenessOnImpureWithWrongType {
+    code("""
+  			def m[A](f: String => A): A = f("Hello")
+  			@impure def il(i: String) = i.length
+  			@pure def x = {
+        	m[Int](x => il(x))
+        	10
+    		}
+  		""") should yieldCompileError("type mismatch")
+  }
+  
   @Test def functionWithTypeParameterIncludesPurenessOnImpureWithAnonLong {
     code("""
   			def m[A](f: String => A): A = f("Hello")
@@ -151,7 +246,7 @@ class HigherLevelFunctionsTest extends JUnitSuite with ShouldMatchersForJUnit {
   				()
   			}
   	    @impure def l(s: String) = s.length
-  			@pure def x = m(l)
+  			@pure def x = m(l _)
   	""") should yieldCompileError("type-parameter of function m must not be impure")
   }
   
@@ -165,7 +260,7 @@ class HigherLevelFunctionsTest extends JUnitSuite with ShouldMatchersForJUnit {
     code("""
         @pure def m[A <: Any @sideEffect](f: String => A): Unit = ()
     		@impure def l(s: String) = s.length
-        @pure def x = m(l)
+        @pure def x = m(l _)
       """) should compile
   }
   @Test def pureFunctionWithParameterDeclaredSideEffectCannotEvaluateIt {
