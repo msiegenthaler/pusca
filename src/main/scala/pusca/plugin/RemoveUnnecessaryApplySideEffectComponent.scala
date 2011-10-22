@@ -17,17 +17,5 @@ class RemoveUnnecessaryApplySideEffectComponent(val global: Global) extends Plug
   val phaseName = "removeUnnecessaryApplySideEffect"
   def newTransformer(unit: CompilationUnit) = new RemoveUnnecessaryApplySideEffect
 
-  class RemoveUnnecessaryApplySideEffect extends Transformer {
-    override def transform(tree: Tree): Tree = tree match {
-      //remove applySideEffect
-      case ApplySideEffect(arg) if !hasAnnotation(arg.tpe, Annotation.sideEffect) ⇒
-        transform(arg)
-        
-      //remove addSideEffect
-      case AddSideEffect(arg) if hasAnnotation(arg.tpe, Annotation.sideEffect) =>
-        transform(arg)
-
-      case other ⇒ super.transform(other)
-    }
-  }
+  class RemoveUnnecessaryApplySideEffect extends RemoveUnnecessaryApplySideEffectBase
 }

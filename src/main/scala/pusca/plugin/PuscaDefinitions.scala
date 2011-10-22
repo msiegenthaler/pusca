@@ -87,5 +87,20 @@ trait PuscaDefinitions {
       case other       ⇒ other.children.foldLeft(soFar)((sf, e) => handle(fun)(e, sf))
     }
   }
+  
+  trait RemoveUnnecessaryApplySideEffectBase extends Transformer {
+    override def transform(tree: Tree): Tree = tree match {
+      //remove applySideEffect
+      case ApplySideEffect(arg) if !hasAnnotation(arg.tpe, Annotation.sideEffect) ⇒
+        transform(arg)
+
+      //remove addSideEffect
+      case AddSideEffect(arg) if hasAnnotation(arg.tpe, Annotation.sideEffect) ⇒
+        transform(arg)
+
+      case other ⇒ super.transform(other)
+    }
+  }
+  
 
 }

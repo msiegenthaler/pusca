@@ -7,20 +7,8 @@ abstract class SideEffectChecker extends PuscaDefinitions {
   val global: Global
   import global._
 
-  object RemoveUnnecessaryApplySideEffect extends Transformer {
-    override def transform(tree: Tree): Tree = tree match {
-      //remove applySideEffect
-      case ApplySideEffect(arg) if !hasAnnotation(arg.tpe, Annotation.sideEffect) ⇒
-        transform(arg)
-
-      //remove addSideEffect
-      case AddSideEffect(arg) if hasAnnotation(arg.tpe, Annotation.sideEffect) ⇒
-        transform(arg)
-
-      case other ⇒ super.transform(other)
-    }
-  }
-
+  object RemoveUnnecessaryApplySideEffect extends RemoveUnnecessaryApplySideEffectBase
+  
   object checker extends AnnotationChecker {
     private def hasSideEffect(tpe: Type) = hasAnnotation(tpe, Annotation.sideEffect)
     private def withSideEffect(tpe: Type) = annotateWith(tpe, Annotation.sideEffect)
