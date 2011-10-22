@@ -7,6 +7,20 @@ abstract class SideEffectChecker extends PuscaDefinitions {
   val global: Global
   import global._
 
+  object RemoveUnnecessaryApplySideEffect extends Transformer {
+    override def transform(tree: Tree): Tree = tree match {
+      //remove applySideEffect
+      case ApplySideEffect(arg) if !hasAnnotation(arg.tpe, Annotation.sideEffect) ⇒
+        transform(arg)
+
+      //remove addSideEffect
+      case AddSideEffect(arg) if hasAnnotation(arg.tpe, Annotation.sideEffect) ⇒
+        transform(arg)
+
+      case other ⇒ super.transform(other)
+    }
+  }
+
   object checker extends AnnotationChecker {
     private def hasSideEffect(tpe: Type) = hasAnnotation(tpe, Annotation.sideEffect)
     private def withSideEffect(tpe: Type) = annotateWith(tpe, Annotation.sideEffect)
@@ -25,11 +39,26 @@ abstract class SideEffectChecker extends PuscaDefinitions {
       //      println("# Lub tp=" + tp + "    ts=" + ts)
       tp
     }
-    
-    override def addAnnotations(tree: Tree, tpe: Type): Type = {
-      //      println("@ addAnnotaions  tree=" + tree + "  tpe=" + tpe)
-      tpe
+
+    override def addAnnotations(tree: Tree, tpe: Type): Type = tree match {
+      case f @ Function(vparams, body) ⇒
+        val t = RemoveUnnecessaryApplySideEffect.transform(body)
+        if (!PureMethodChecker(f.symbol, body).isEmpty) {
+          //impure function, so annotate the return type
+          tpe match {
+            case r: TypeRef ⇒
+              val (h, t :: Nil) = r.args.splitAt(r.args.size - 1)
+              val nt = annotateWith(t, Annotation.sideEffect)
+              TypeRef(r.pre, r.sym, h ::: nt :: Nil)
+            case _ ⇒ annotateWith(tpe, Annotation.sideEffect)
+          }
+        } else tpe
+      case _ ⇒ tpe
     }
+
+    private def handleStatements(t: Tree) = {
+    }
+
     override def canAdaptAnnotations(tree: Tree, mode: Int, pt: Type): Boolean = {
       //      println("# canAdapt  tree=" + tree + "  mode=" + mode + "  pt=" + pt)
       false
