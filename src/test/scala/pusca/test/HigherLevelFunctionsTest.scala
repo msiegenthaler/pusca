@@ -138,6 +138,14 @@ class HigherLevelFunctionsTest extends JUnitSuite with ShouldMatchersForJUnit {
   			}
   		""") should yieldCompileError("no type parameters for method m")
   }
+  
+  @Test def functionWithTypeParameterCalledFromImpureWithImpure {
+    code("""
+  			def m[A](f: String => A): A = f("Hello")
+  			def il(i: String): Int @sideEffect = i.length
+  			@impure def x = m(s => il(s))
+  		""") should compile
+  }  
 
   @Test def functionWithTypeParameterIncludesPurenessOnImpureWithAnonAndExplicit {
     code("""
@@ -228,7 +236,21 @@ class HigherLevelFunctionsTest extends JUnitSuite with ShouldMatchersForJUnit {
   			@pure def x = m(s => il(s))
   		""") should yieldCompileError("impure method call inside the pure method 'x'")
   }
-  
+  @Test def functionWithTypeParameterIncludesPurenessOnImpureWithAnonLong2 {
+    code("""
+  			def m[A](f: String => A): A = f("Hello")
+  			def il(i: String): Int @sideEffect = i.length
+  			@pure def x = m(s => il(s))
+  		""") should yieldCompileError("impure method call inside the pure method 'x'")
+  }
+  @Test def functionWithTypeParameterIncludesPurenessOnImpureWithAnonLongExplicit {
+    code("""
+  			def m[A](f: String => A): A = f("Hello")
+  			@impure def il(i: String) = i.length
+  			@pure def x = m[Int @sideEffect](s => il(s))
+  		""") should yieldCompileError("method 'x' has @pure annotation and a @sideEffect return type")
+  }
+
   @Test def pureFunctionWithParameterThatIsNotAReturnValueAcceptsPure {
     code("""
         @pure def m[A](f: String => A): Unit = {
