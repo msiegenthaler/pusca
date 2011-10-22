@@ -28,7 +28,8 @@ class MethodReturnTypeAnnotatorComponent(val global: Global) extends PluginCompo
     override def transform(tree: Tree): Tree = tree match {
       case d: DefDef if isConstructor(d) && !hasAnnotation(d.tpt, Annotation.sideEffect) && impureClass ⇒
         val ntpt = annotate(d.tpt, Annotation.sideEffect)
-        super.transform(d.copy(tpt = ntpt))
+        val ndef = treeCopy.DefDef(d, d.mods, d.name, d.tparams, d.vparamss, ntpt, d.rhs)
+        super.transform(ndef)
       case d @ DefDef(_, _, _, _, tpt, rhs) if hasAnnotation(d, Annotation.impure) && !hasAnnotation(d.tpt, Annotation.sideEffect) ⇒ tpt match {
         case TypeTree() ⇒ //unspecified return type 
           val nrhs = rhs match {
@@ -39,7 +40,8 @@ class MethodReturnTypeAnnotatorComponent(val global: Global) extends PluginCompo
 
         case tpt ⇒
           val ntpt = annotate(d.tpt, Annotation.sideEffect)
-          super.transform(d.copy(tpt = ntpt))
+          val ndef = treeCopy.DefDef(d, d.mods, d.name, d.tparams, d.vparamss, ntpt, d.rhs)
+          super.transform(ndef)
       }
 
       case c: ClassDef ⇒
