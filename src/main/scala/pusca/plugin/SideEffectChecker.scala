@@ -10,7 +10,7 @@ abstract class SideEffectChecker extends PuscaDefinitions {
   object checker extends AnnotationChecker {
     private def hasSideEffect(tpe: Type) = hasAnnotation(tpe, Annotation.sideEffect)
     private def withSideEffect(tpe: Type) = annotateWith(tpe, Annotation.sideEffect)
-    
+
     def annotationsConform(tpe1: Type, tpe2: Type): Boolean = {
       //      println("# conform tp1=" + tpe1 + "    tp2=" + tpe2)
       hasSideEffect(tpe2) || !hasSideEffect(tpe1)
@@ -25,7 +25,11 @@ abstract class SideEffectChecker extends PuscaDefinitions {
       //      println("# Lub tp=" + tp + "    ts=" + ts)
       tp
     }
-
+    
+    override def addAnnotations(tree: Tree, tpe: Type): Type = {
+      //      println("@ addAnnotaions  tree=" + tree + "  tpe=" + tpe)
+      tpe
+    }
     override def canAdaptAnnotations(tree: Tree, mode: Int, pt: Type): Boolean = {
       //      println("# canAdapt  tree=" + tree + "  mode=" + mode + "  pt=" + pt)
       false
