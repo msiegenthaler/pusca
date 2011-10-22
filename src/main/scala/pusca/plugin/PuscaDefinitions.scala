@@ -37,7 +37,7 @@ trait PuscaDefinitions {
   }
   object AddSideEffect {
     def unapply(t: Tree) = t match {
-      case Apply(TypeApply(Select(Select(Ident(p), pko), mn), _), arg :: Nil) if p == puscaPackage.name && pko == stringToTermName("package") && mn == applySideEffectMethod.name ⇒
+      case Apply(TypeApply(Select(Select(Ident(p), pko), mn), _), arg :: Nil) if p == puscaPackage.name && pko == stringToTermName("package") && mn == addSideEffectMethod.name ⇒
         Some(arg)
       case _ ⇒ None
     }
