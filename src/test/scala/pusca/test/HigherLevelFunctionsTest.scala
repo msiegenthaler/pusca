@@ -197,7 +197,7 @@ class HigherLevelFunctionsTest extends JUnitSuite with ShouldMatchersForJUnit {
   				m[Unit @sideEffect](il _)
   				10
   			}
-  		""") should yieldCompileError(" method 'x' has @pure annotation and a @sideEffect return type")
+  		""") should yieldCompileError("impure method call inside the pure method 'x'")
   }
   @Test def functionWithTypeParameterIncludesPurenessOnImpureWithAnonAndUnitMiddle {
     code("""
