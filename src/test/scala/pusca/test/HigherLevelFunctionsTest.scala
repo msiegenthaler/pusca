@@ -38,7 +38,7 @@ class HigherLevelFunctionsTest extends JUnitSuite with ShouldMatchersForJUnit {
   			@pure def x = {
   				m(p(2, _))
   			}
-  	""") should yieldCompileError("impure method call inside the pure method 'x'")
+  	""") should yieldCompileError("type mismatch")
   }
 
   @Test def functionWithSideEffectCannotBeEvaluatedInsidePureFunctionLast {

@@ -36,11 +36,16 @@ class ApplySideEffectComponent(val global: Global) extends PluginComponent with 
 
     override def transform(tree: Tree): Tree = findStatementBlock(tree)
 
+    private var insideImpure = false
     protected def findStatementBlock(t: Tree): Tree = t match {
+      case c: ClassDef =>
+        insideImpure = hasAnnotation(c, Annotation.impure)
+        treeCopy.ClassDef(c, c.mods, c.name, c.tparams, findStatementBlock(c.impl).asInstanceOf[Template])
       case t: Template ⇒
         val body = t.body.map(handleStatementBlock)
         treeCopy.Template(t, t.parents, t.self, body)
       case d: DefDef ⇒
+      	insideImpure = hasAnnotation(d, Annotation.impure) || hasAnnotation(d.tpt, Annotation.sideEffect)
         val rhs = handleMethodReturnBlock(d.rhs)
         treeCopy.DefDef(d, d.mods, d.name, d.tparams, d.vparamss, d.tpt, rhs)
       case v: ValDef ⇒
@@ -51,7 +56,7 @@ class ApplySideEffectComponent(val global: Global) extends PluginComponent with 
         val stats = b.stats.map(handleStatementBlock)
         treeCopy.Block(b, stats, expr)
         
-      case f @ Function(_, body) =>
+      case f @ Function(_, body) if insideImpure =>
         treeCopy.Function(f, f.vparams, handleStatementBlock(body))
 
       case other ⇒ super.transform(other)
