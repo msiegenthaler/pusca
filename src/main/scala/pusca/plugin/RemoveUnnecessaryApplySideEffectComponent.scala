@@ -19,10 +19,13 @@ class RemoveUnnecessaryApplySideEffectComponent(val global: Global) extends Plug
 
   class RemoveUnnecessaryApplySideEffect extends Transformer {
     override def transform(tree: Tree): Tree = tree match {
+      //remove applySideEffect
       case ApplySideEffect(arg) if !hasAnnotation(arg.tpe, Annotation.sideEffect) ⇒
         transform(arg)
-      case a @ ApplySideEffect(arg) ⇒
-        super.transform(a)
+        
+      //remove addSideEffect
+      case AddSideEffect(arg) if hasAnnotation(arg.tpe, Annotation.sideEffect) =>
+        transform(arg)
 
       case other ⇒ super.transform(other)
     }

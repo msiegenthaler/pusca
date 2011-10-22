@@ -26,8 +26,16 @@ trait PuscaDefinitions {
 
   protected lazy val puscaPackage = definitions.getModule("pusca")
   protected lazy val applySideEffectMethod = definitions.getMember(puscaPackage, "applySideEffect")
+  protected lazy val addSideEffectMethod = definitions.getMember(puscaPackage, "addSideEffect")
 
   object ApplySideEffect {
+    def unapply(t: Tree) = t match {
+      case Apply(TypeApply(Select(Select(Ident(p), pko), mn), _), arg :: Nil) if p == puscaPackage.name && pko == stringToTermName("package") && mn == applySideEffectMethod.name ⇒
+        Some(arg)
+      case _ ⇒ None
+    }
+  }
+  object AddSideEffect {
     def unapply(t: Tree) = t match {
       case Apply(TypeApply(Select(Select(Ident(p), pko), mn), _), arg :: Nil) if p == puscaPackage.name && pko == stringToTermName("package") && mn == applySideEffectMethod.name ⇒
         Some(arg)
