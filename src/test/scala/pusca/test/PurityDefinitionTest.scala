@@ -14,6 +14,7 @@ class PurityDefinitionTest extends JUnitSuite with ShouldMatchersForJUnit {
   private def assertImpure(definition: String, call: String) = {
     val a = "@pure def checker = " + call
     val b = "@impure def impureChecker = " + call
+    new PluginTester().fromString(definition).run should compile
     new PluginTester().fromString(definition).fromString(a).fromString(b).run should
       yieldCompileError("method 'checker' has @pure annotation and a @sideEffect return type")
   }
@@ -34,18 +35,24 @@ class PurityDefinitionTest extends JUnitSuite with ShouldMatchersForJUnit {
   @Test def defImpureFunctionSideEffectInt {
     assertImpure("def ip(a: Int): Int @sideEffect = 10", "ip(20)")
   }
-  
+
   @Test def defImpureFunctionImplicitThroughLastStatement {
     assertImpure("""
   		def ip(a: String): Unit @sideEffect = ()
-  	    def ip2(a: String) = ip(a)""", "ip2(\"Hi\")")
+  	  def ip2(a: String) = ip(a)""", "ip2(\"Hi\")")
   }
   @Test def defImpureFunctionImplicitThroughLastStatement2 {
     assertImpure("""
-  		@impure def ip(a: String): Unit = ()
-  	  	def ip2(a: String) = ip(a)""", "ip2(\"Hi\")")
+    		@impure def ip(a: String): Unit = ()
+    		def ip2(a: String) = ip(a)""", "ip2(\"Hi\")")
   }
-  
+
+  @Test def defImpureFunctionExplicitAndThroughLastStatement {
+    assertImpure("""
+  		@impure def ip(a: String): Unit = ()
+  	  @impure def ip2(a: String) = ip(a)""", "ip2(\"Hi\")")
+  }
+
   @Test def defDeclarePureOnPure {
     val w = PluginTester("@declarePure def dp(a: Int) = a").warnings
     w should have size (1)
@@ -91,5 +98,4 @@ class PurityDefinitionTest extends JUnitSuite with ShouldMatchersForJUnit {
         def b = a
         @pure def c = b""") should yieldCompileError("method 'c' has @pure annotation and a @sideEffect return type")
   }
-
 }
