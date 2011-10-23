@@ -38,14 +38,14 @@ class ApplySideEffectComponent(val global: Global) extends PluginComponent with 
 
     private var insideImpure = false
     protected def findStatementBlock(t: Tree): Tree = t match {
-      case c: ClassDef =>
+      case c: ClassDef ⇒
         insideImpure = hasAnnotation(c, Annotation.impure)
         treeCopy.ClassDef(c, c.mods, c.name, c.tparams, findStatementBlock(c.impl).asInstanceOf[Template])
       case t: Template ⇒
         val body = t.body.map(handleStatementBlock)
         treeCopy.Template(t, t.parents, t.self, body)
       case d: DefDef ⇒
-      	insideImpure = hasAnnotation(d, Annotation.impure) || hasAnnotation(d.tpt, Annotation.sideEffect)
+        insideImpure = hasAnnotation(d, Annotation.impure) || hasAnnotation(d.tpt, Annotation.sideEffect)
         val rhs = handleMethodReturnBlock(d.rhs)
         treeCopy.DefDef(d, d.mods, d.name, d.tparams, d.vparamss, d.tpt, rhs)
       case v: ValDef ⇒
@@ -55,17 +55,16 @@ class ApplySideEffectComponent(val global: Global) extends PluginComponent with 
         val expr = handleStatementBlock(b.expr)
         val stats = b.stats.map(handleStatementBlock)
         treeCopy.Block(b, stats, expr)
-        
-      case f @ Function(_, body) if insideImpure =>
-        treeCopy.Function(f, f.vparams, handleStatementBlock(body))
+
+      case f @ Function(_, body) ⇒
+        treeCopy.Function(f, f.vparams, handleMethodReturnBlock(body))
 
       case other ⇒ super.transform(other)
     }
 
     protected def handleStatementBlock(t: Tree): Tree = t match {
       case ApplySideEffectFun(a @ Apply(fun, args)) ⇒ //method call to applySideEffect with nested apply
-        val na = treeCopy.Apply(a, fun, args.map(handleStatementBlock))
-        applySideEffect(na)
+        handleStatementBlock(a)
       case a @ ApplySideEffectFun(args) ⇒ //method call to applySideEffect without nested apply
         a
       case a @ Apply(Select(Super(_, _), n), _) if n == stringToTermName("<init>") ⇒ // don't do anything with super.<init>
