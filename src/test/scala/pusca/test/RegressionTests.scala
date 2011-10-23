@@ -10,6 +10,7 @@ import org.junit.runners.Suite.SuiteClasses
   classOf[AssignmentTest], //
   classOf[ImpurityTest], //
   classOf[PurityTest], //
+  classOf[HigherLevelFunctionsTest], //
   classOf[SideEffectAnnotationTest]))
 class RegressionTests {
 }

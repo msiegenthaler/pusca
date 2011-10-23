@@ -26,3 +26,10 @@ can be used. Example:
 	@impure class MyClass {
 		println("Hi") // impure call
 	} 
+
+	
+	
+	
+LIMITATIONS:
+ - Type Parameter on methods that take impure functions as parameter may need to be specified explicitly
+    - see HigherLevelFunctionsWithInferenceTest
