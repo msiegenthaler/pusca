@@ -62,9 +62,9 @@ trait PuscaDefinitions {
     case class Error(pos: Position, msg: String) {
       def report = reporter.error(pos, msg)
     }
-    
+
     def apply(fun: Symbol, t: Tree): List[Error] = handle(fun)(t, Nil)
-    
+
     private[this] def handle(fun: Symbol)(t: Tree, soFar: List[Error]): List[Error] = t match {
       case a @ ApplySideEffect(impure) ⇒
         Error(a.pos, "impure method call inside the pure method '" + fun.fullName + "'") :: soFar
@@ -84,10 +84,10 @@ trait PuscaDefinitions {
       case d: DefDef   ⇒ soFar
       case c: ClassDef ⇒ soFar
       case f: Function ⇒ soFar
-      case other       ⇒ other.children.foldLeft(soFar)((sf, e) => handle(fun)(e, sf))
+      case other       ⇒ other.children.foldLeft(soFar)((sf, e) ⇒ handle(fun)(e, sf))
     }
   }
-  
+
   trait RemoveUnnecessaryApplySideEffectBase extends Transformer {
     override def transform(tree: Tree): Tree = tree match {
       //remove applySideEffect
@@ -101,6 +101,5 @@ trait PuscaDefinitions {
       case other ⇒ super.transform(other)
     }
   }
-  
 
 }
