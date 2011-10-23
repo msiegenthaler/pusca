@@ -27,15 +27,20 @@ class PurePlugin(val global: Global) extends Plugin {
   import global._
   private object ShowTreeComponent extends PluginComponent {
     val global: PurePlugin.this.global.type = PurePlugin.this.global
-    override val runsAfter = List("typer", "removeUnnecessaryApplySideEffect", "forbiddenSideEffectAssignment")
+    override val runsAfter = List("typer", "forbiddenSideEffectAssignment", "removeUnnecessaryApplySideEffect")
     override val runsBefore = List("purityChecker")
     val phaseName = "showTree"
     def newPhase(_prev: Phase) = new ShowTreePhase(_prev)
 
+    private var cnt = 0
+
     class ShowTreePhase(prev: Phase) extends StdPhase(prev) {
       override def name = phaseName
       def apply(unit: CompilationUnit) {
-        global.treeBrowsers.create().browse(unit.body)
+        cnt = cnt + 1
+        if (cnt % 4 == 0) { //customized for the tests
+          global.treeBrowsers.create().browse(prev.name, unit :: Nil)
+        }
       }
     }
   }
