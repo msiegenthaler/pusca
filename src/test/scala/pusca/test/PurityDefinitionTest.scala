@@ -74,15 +74,17 @@ class PurityDefinitionTest extends JUnitSuite with ShouldMatchersForJUnit {
   @Test def impureClassConstructor {
     assertImpure("""
 			  def ip(a: String): Unit @sideEffect = ()
-			  @impure class X { val a = ip("Hi") }""", "new X()")
+			  @impure class X { val a = ip("Hi") }
+        def run = new X()""", "run")
   }
   @Test def impureClassConstructor2 {
     assertImpure("""@impure class X { val a = 1 }""", "new X()")
   }
   @Test def impureClassConstructorWithArguments {
     assertImpure("""
-		def ip(a: String): Unit @sideEffect = ()
-		@impure class X(b: Int, val c: Int) { val a = ip("Hi") }""", "new X(1, 2)")
+    		def ip(a: String): Unit @sideEffect = ()
+    		@impure class X(b: Int, val c: Int) { val a = ip("Hi") }
+    		def run = new X(1, 2)""", "run")
   }
 
   @Test def conflictingAnnotationsYieldError {
