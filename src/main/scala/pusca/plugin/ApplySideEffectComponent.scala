@@ -59,7 +59,9 @@ class ApplySideEffectComponent(val global: Global) extends PluginComponent with 
       case f @ Function(_, body) ⇒
         treeCopy.Function(f, f.vparams, handleMethodReturnBlock(body))
 
-      case other ⇒ super.transform(other)
+      case i @ Import(_, _) ⇒ i
+
+      case other            ⇒ super.transform(other)
     }
 
     protected def handleStatementBlock(t: Tree): Tree = t match {
