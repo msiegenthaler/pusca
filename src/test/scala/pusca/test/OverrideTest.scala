@@ -44,25 +44,61 @@ class OverrideTest extends JUnitSuite with ShouldMatchersForJUnit {
   			class C extends B { override def a = "Ho" }""") should compile
   }
 
-  @Test def pureMayOverrideImpureButNotCallSuper {
+  @Test def pureMayOverrideImpureButNotCallSuperMiddle {
     code("""
     		trait A { @impure def a: String }
     		class B extends A { @impure override def a = "Hi" }
-    		class C extends B { override def a = super.a + "!" }""") should
-    			yieldCompileError("impure function call inside the pure function 'a'")
+    		class C extends B {
+        	@pure override def a = {
+        		val v = super.a 
+        		v + "!"
+    			}
+        }""") should yieldCompileError("impure method call inside the pure method 'C.a'")
+  }
+  
+  @Test def pureMayOverrideImpureButNotCallSuperEnd {
+    code("""
+    		trait A { @impure def a: String }
+    		class B extends A { @impure override def a() = "Hi" }
+    		class C extends B {
+        	@pure override def a() = super.a() + "!" 
+        }""") should yieldCompileError("impure method call inside the pure method 'C.a'")
   }
 
-  @Test def impureMayNotOverridePure {
+  @Test def pureMayOverrideImpureButNotCallSuperEnd2 {
+    code("""
+    		trait A { @impure def a: String }
+    		class B extends A { @impure override def a = "Hi" }
+    		class C extends B {
+        	@pure override def a = super.a + "!" 
+        }""") should yieldCompileError("impure method call inside the pure method 'C.a'")
+  }
+
+  @Test def impureMayNotOverridePureSideEFfect {
+    code("""
+  			trait A { def a: String }
+  			class B extends A { override def a: String @sideEffect = "Hi" }""") should
+  				yieldCompileError("overriding method a in trait A of type => String")
+  }
+  
+  @Test def impureMayNotOverridePureImpure {
     code("""
   			trait A { def a: String }
   			class B extends A { @impure override def a = "Hi" }""") should
-  				yieldCompileError("cannot override pure function 'a'")
+  				yieldCompileError("type mismatch")
+  }
+  
+  @Test def impureMayNotOverridePureNonAbstractSideEffect {
+    code("""
+  			trait A { def a: String = "Ho" }
+  	    class B extends A { override def a: String @sideEffect = "Hi" }""") should
+  	    	yieldCompileError("overriding method a in trait A of type => String")
   }
 
-  @Test def impureMayNotOverridePureNonAbstract {
+  @Test def impureMayNotOverridePureNonAbstractImpure {
     code("""
   			trait A { def a: String = "Ho" }
   	    class B extends A { @impure override def a = "Hi" }""") should
-  	    	yieldCompileError("cannot override pure function 'a'")
+  	    	yieldCompileError("type mismatch")
   }
 }
