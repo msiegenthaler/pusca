@@ -78,4 +78,35 @@ class ConstructorTests extends JUnitSuite with ShouldMatchersForJUnit {
  				trait A { ip("Hi") }
         """) should yieldCompileError("impure method call inside the pure class 'A'")
   }
+  
+  @Test def impureConstructorMayCallImpureMethods {
+    code("""
+        @impure def ip(s: String) = ()
+ 				@impure trait A { ip("Hi") }
+        """) should compile
+  }
+
+  @Test def impureConstructorMayCallImpureMethodsWithVal {
+    code("""
+        @impure def ip(s: String) = ()
+ 				@impure trait A { val x = ip("Hi") }
+        """) should compile
+  }
+
+  @Test def impureConstructorMayAccessVars {
+    code("""
+        @impure def ip(s: String) = ()
+ 				object A { var x = 10 }
+        @impure class B {
+        	val b = A.x
+    		}
+        """) should compile
+  }
+
+  @Test def constructorDeclaredImpureMayUseVars {
+    code("""trait X {
+        			var a = 10
+        			@impure trait A { val b = a }
+    				}""") should compile
+  }
 }
