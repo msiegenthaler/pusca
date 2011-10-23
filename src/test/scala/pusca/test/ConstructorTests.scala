@@ -57,14 +57,6 @@ class ConstructorTests extends JUnitSuite with ShouldMatchersForJUnit {
   	yieldCompileError("method 'run' has @pure annotation and a @sideEffect return type")
   }
 
-  @Test def cannotExtendClassWithImpureConstructorWithAPureOne {
-    code("""
-        @impure def ip(s: String) = ()
-  			@impure class A { ip("hi") }
-  			@pure class B extends A""") should
-      yieldCompileError("impure function call inside the pure function '<init>'")
-  }
-
   @Test def constructorNotDeclaredImpureMayNotUseVars {
     code("""trait X {
         			var a = 10

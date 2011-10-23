@@ -101,4 +101,12 @@ class OverrideTest extends JUnitSuite with ShouldMatchersForJUnit {
   	    class B extends A { @impure override def a = "Hi" }""") should
   	    	yieldCompileError("type mismatch")
   }
+  
+  @Test def cannotExtendClassWithImpureConstructorWithAPureOne {
+    code("""
+        @impure def ip(s: String) = ()
+  			@impure class A { ip("hi") }
+  			@pure class B extends A""") should
+      yieldCompileError("impure function call inside the pure function '<init>'")
+  }
 }
