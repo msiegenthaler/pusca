@@ -59,7 +59,7 @@ trait PuscaDefinitions {
   }
   object PureConstructor {
     def unapply(t: Tree) = t match {
-      case c @ ClassDef(mod, name, tparams, impl) if !hasAnnotation(c.symbol, Annotation.sideEffect) ⇒
+      case c @ ClassDef(mod, name, tparams, impl) if !hasAnnotation(c.symbol, Annotation.impure) ⇒
         Some(impl)
       case _ ⇒ None
     }
