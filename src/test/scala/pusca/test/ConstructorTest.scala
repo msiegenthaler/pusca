@@ -5,7 +5,7 @@ import org.scalatest.junit.ShouldMatchersForJUnit
 import org.junit.Test
 import PluginTester._
 
-class ConstructorTests extends JUnitSuite with ShouldMatchersForJUnit {
+class ConstructorTest extends JUnitSuite with ShouldMatchersForJUnit {
   @Test def pureFunctionMayCallPureConstructor {
     code("""
     		@impure class A { val x = "Hi" }
