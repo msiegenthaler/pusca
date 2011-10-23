@@ -57,34 +57,41 @@ trait PuscaDefinitions {
       case _ ⇒ None
     }
   }
+  object PureConstructor {
+    def unapply(t: Tree) = t match {
+      case c @ ClassDef(mod, name, tparams, impl) if !hasAnnotation(c.symbol, Annotation.sideEffect) ⇒
+        Some(impl)
+      case _ ⇒ None
+    }
+  }
 
   object PureMethodChecker {
     case class Error(pos: Position, msg: String) {
       def report = reporter.error(pos, msg)
     }
 
-    def apply(fun: Symbol, t: Tree): List[Error] = handle(fun)(t, Nil)
+    def apply(obj: Symbol, objName: String, t: Tree): List[Error] = handle(obj, objName)(t, Nil)
 
-    private[this] def handle(fun: Symbol)(t: Tree, soFar: List[Error]): List[Error] = t match {
+    private[this] def handle(obj: Symbol, objName: String)(t: Tree, soFar: List[Error]): List[Error] = t match {
       case a @ ApplySideEffect(impure) ⇒
-        Error(a.pos, "impure method call inside the pure method '" + fun.fullName + "'") :: soFar
+        Error(a.pos, "impure method call inside the pure " + objName) :: soFar
 
-      case a @ Assign(lhs, rhs) if (!lhs.symbol.ownerChain.contains(fun)) ⇒ // assign to var outside the scope of this method
-        Error(a.pos, "write to non-local var inside the pure method '" + fun.fullName + "'") :: soFar
+      case a @ Assign(lhs, rhs) if (!lhs.symbol.ownerChain.contains(obj)) ⇒ // assign to var outside the scope of this method
+        Error(a.pos, "write to non-local var inside the pure " + objName) :: soFar
       case s: Select if s.symbol.isSetter ⇒ //assign to var via setter
-        Error(s.pos, "write to non-local var inside the pure method '" + fun.fullName + "'") :: soFar
+        Error(s.pos, "write to non-local var inside the pure " + objName) :: soFar
 
-      case s: Select if s.symbol.isMutable && !s.symbol.ownerChain.contains(fun) ⇒ // read of var outside the scope of this method (private[this])
-        Error(s.pos, "access to non-local var inside the pure method '" + fun.fullName + "'") :: soFar
-      case i: Ident if i.symbol.isMutable && !i.symbol.ownerChain.contains(fun) ⇒ // read of var defined in an outer function
-        Error(i.pos, "access to non-local var inside the pure method '" + fun.fullName + "'") :: soFar
+      case s: Select if s.symbol.isMutable && !s.symbol.ownerChain.contains(obj) ⇒ // read of var outside the scope of this method (private[this])
+        Error(s.pos, "access to non-local var inside the pure " + objName) :: soFar
+      case i: Ident if i.symbol.isMutable && !i.symbol.ownerChain.contains(obj) ⇒ // read of var defined in an outer function
+        Error(i.pos, "access to non-local var inside the pure " + objName) :: soFar
       case s: Select if s.symbol.isGetter && !s.symbol.isStable ⇒ // read of var via accessor
-        Error(s.pos, "access to non-local var inside the pure method '" + fun.fullName + "'") :: soFar
+        Error(s.pos, "access to non-local var inside the pure " + objName) :: soFar
 
       case d: DefDef   ⇒ soFar
       case c: ClassDef ⇒ soFar
       case f: Function ⇒ soFar
-      case other       ⇒ other.children.foldLeft(soFar)((sf, e) ⇒ handle(fun)(e, sf))
+      case other       ⇒ other.children.foldLeft(soFar)((sf, e) ⇒ handle(obj, objName)(e, sf))
     }
   }
 

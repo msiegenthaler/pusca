@@ -6,7 +6,6 @@ import org.junit.Test
 import PluginTester._
 
 class ConstructorTests extends JUnitSuite with ShouldMatchersForJUnit {
-
   @Test def pureFunctionMayCallPureConstructor {
     code("""
     		@impure class A { val x = "Hi" }
@@ -34,8 +33,28 @@ class ConstructorTests extends JUnitSuite with ShouldMatchersForJUnit {
   @Test def pureFunctionCannotCallImpureConstuctor {
     code("""
     		@impure class A { var x = "Hi" }
-    		def makeA = new A""") should
-      yieldCompileError("impure function call inside the pure function 'makeA'")
+    		def makeA = {
+        	new A
+        	()
+    		}""") should
+      yieldCompileError("impure method call inside the pure method 'makeA'")
+  }
+  
+  @Test def pureFunctionCannotCallImpureConstuctor2 {
+  	code("""
+  			@impure class A { var x = "Hi" }
+  			@pure def makeA = new A
+  		""") should
+  	yieldCompileError("method 'makeA' has @pure annotation and a @sideEffect return type")
+  }
+  
+  @Test def callingImpureNewLastMakesAMethodImpure {
+  	code("""
+  			@impure class A { var x = "Hi" }
+  			def makeA = new A
+  	    @pure def run = makeA
+  		""") should
+  	yieldCompileError("method 'run' has @pure annotation and a @sideEffect return type")
   }
 
   @Test def cannotExtendClassWithImpureConstructorWithAPureOne {
@@ -47,13 +66,16 @@ class ConstructorTests extends JUnitSuite with ShouldMatchersForJUnit {
   }
 
   @Test def constructorNotDeclaredImpureMayNotUseVars {
-    code("trait A { var a = 1 }") should yieldCompileError("access to non-local var inside the pure function '<init>'")
+    code("""trait X {
+        			var a = 10
+        			trait A { val b = a }
+    				}""") should yieldCompileError("access to non-local var inside the pure class 'X.A'")
   }
 
   @Test def constructorNotDeclaredImpureMayNotCallImpureFunction {
     code("""
         @impure def ip(s: String) = ()
  				trait A { ip("Hi") }
-        """) should yieldCompileError("impure function call inside the pure function '<init>'")
+        """) should yieldCompileError("impure method call inside the pure class 'A'")
   }
 }

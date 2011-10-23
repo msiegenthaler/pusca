@@ -30,7 +30,7 @@ abstract class SideEffectChecker extends PuscaDefinitions {
     override def addAnnotations(tree: Tree, tpe: Type): Type = {
       //println("# addAnnotations type of tree=" + tree.getClass + "   tpe=" + tpe + "\n       tree=" + tree)
       tree match {
-        case f @ Function(vparams, body) if !PureMethodChecker(f.symbol, RemoveUnnecessaryApplySideEffect.transform(body)).isEmpty ⇒
+        case f @ Function(vparams, body) if !PureMethodChecker(f.symbol, "", RemoveUnnecessaryApplySideEffect.transform(body)).isEmpty ⇒
           //impure function, so annotate the return type
           tpe match {
             case r: TypeRef ⇒

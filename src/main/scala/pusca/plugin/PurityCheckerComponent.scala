@@ -20,11 +20,14 @@ class PurityCheckerComponent(val global: Global) extends PluginComponent with Pu
     override def apply(unit: CompilationUnit) {
       def handle(t: Tree): Unit = t match {
         case PureDefDef(d) ⇒
-          PureMethodChecker(d.symbol, d.rhs).foreach(_.report)
+          PureMethodChecker(d.symbol, "method '" + d.symbol.fullName + "'", d.rhs).foreach(_.report)
           handle(d.rhs)
         case PureFunction(f) ⇒
-          PureMethodChecker(f.symbol, f.body).foreach(_.report)
+          PureMethodChecker(f.symbol, "function '" + f.symbol.fullName + "'", f.body).foreach(_.report)
           handle(f.body)
+        case c @ PureConstructor(tmpl) ⇒
+          PureMethodChecker(tmpl.symbol, "class '" + c.symbol.fullName + "'", tmpl).foreach(_.report)
+          handle(tmpl)
         case other ⇒
           other.children.foreach(handle)
       }
