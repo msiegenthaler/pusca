@@ -29,6 +29,7 @@ abstract class SideEffectChecker extends PuscaDefinitions {
 
     override def addAnnotations(tree: Tree, tpe: Type): Type = {
       //println("# addAnnotations type of tree=" + tree.getClass + "   tpe=" + tpe + "\n       tree=" + tree)
+      //TODO still needed?
       tree match {
         case f @ Function(vparams, body) if !PureMethodChecker(f.symbol, "", RemoveUnnecessaryApplySideEffect.transform(body)).isEmpty ⇒
           //impure function, so annotate the return type
@@ -50,12 +51,41 @@ abstract class SideEffectChecker extends PuscaDefinitions {
 
     override def canAdaptAnnotations(tree: Tree, mode: Int, pt: Type): Boolean = {
       //println("# canAdapt  tree=" + tree + "  mode=" + mode + "  pt=" + pt)
-      false
+      tree match {
+        case ApplySideEffect(_) ⇒ false
+        case a: Apply if hasAnnotation(a.tpe, Annotation.sideEffect) ⇒ true
+        case i: Ident if (hasAnnotation(i.tpe, Annotation.sideEffect)) ⇒ true
+        case s: Select if (hasAnnotation(s.tpe, Annotation.sideEffect)) ⇒ true
+        case _ ⇒ false
+      }
     }
 
+    protected def applySideEffectFun = Select(Ident(puscaPackage.name.toTermName), "applySideEffect")
+    protected def applySideEffect(v: Tree) = {
+      val a = Apply(applySideEffectFun, v :: Nil)
+      a.pos = v.pos
+      a
+    }
+
+    private[this] val recursive = new ThreadLocal[Boolean]
+    def recursiveSection[A](rec: A)(f: ⇒ A): A = {
+      if (recursive.get) rec
+      else
+        try {
+          recursive.set(true)
+          f
+        } finally {
+          recursive.set(false)
+        }
+    }
     override def adaptAnnotations(tree: Tree, mode: Int, pt: Type): Tree = {
-      //println("# adapt  tree=" + tree + "  mode=" + mode + "  pt=" + pt)
-      tree
+      println("# adapt  tree=" + tree + "  mode=" + analyzer.modeString(mode) + "  pt=" + pt)
+      recursiveSection(tree) {
+        val localTyper = analyzer.newTyper(analyzer.rootContext(currentRun.currentUnit, tree, false))
+        val nt = applySideEffect(tree)
+
+        localTyper.typed(nt)
+      }
     }
 
     override def adaptBoundsToAnnotations(bounds: List[TypeBounds],
