@@ -35,6 +35,8 @@ trait PuscaDefinitions {
     def unapply(t: Tree) = t match {
       case Apply(TypeApply(Select(Select(Ident(p), pko), mn), _), arg :: Nil) if p == puscaPackage.name && pko == stringToTermName("package") && mn == applySideEffectMethod.name ⇒
         Some(arg)
+      case Apply(Select(Select(Ident(p), pko), mn), arg :: Nil) if p == puscaPackage.name && pko == stringToTermName("package") && mn == applySideEffectMethod.name ⇒
+        Some(arg)
       case _ ⇒ None
     }
   }
@@ -77,6 +79,7 @@ trait PuscaDefinitions {
 
     private[this] def handle(obj: Symbol, objName: String)(t: Tree, soFar: List[Error]): List[Error] = t match {
       case a @ ApplySideEffect(impure) ⇒
+      	println("## found as "+a)
         Error(a.pos, "impure method call inside the pure " + objName) :: soFar
 
       case a @ Assign(lhs, rhs) if (!lhs.symbol.ownerChain.contains(obj)) ⇒ // assign to var outside the scope of this method
