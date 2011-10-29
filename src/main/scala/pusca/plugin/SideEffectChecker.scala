@@ -2,6 +2,7 @@ package pusca
 package plugin
 
 import scala.tools.nsc.Global
+import scala.tools.nsc.symtab.Flags._
 
 abstract class SideEffectChecker extends PuscaDefinitions {
   val global: Global
@@ -28,9 +29,37 @@ abstract class SideEffectChecker extends PuscaDefinitions {
     }
 
     override def addAnnotations(tree: Tree, tpe: Type): Type = {
-      //println("# addAnnotations type of tree=" + tree.getClass + "   tpe=" + tpe + "\n       tree=" + tree)
-      //TODO still needed?
+      //      println("# addAnnotations type of tree=" + tree.getClass + "   tpe=" + tpe + "\n       tree=" + tree)
       tree match {
+        case d @ DefDef(mods, name, tparams, vparamss, tpt, rhs) if name == stringToTermName("a") ⇒ //TODO
+          val last = rhs match {
+            case Block(_, expr) ⇒ expr
+            case other          ⇒ other
+          }
+          val t = last match {
+            //TODO add check for synthetic
+            case ApplySideEffect(f) ⇒ f.tpe
+            case o                  ⇒ o.tpe
+          }
+
+          if (hasAnnotation(t, Annotation.sideEffect)) {
+            println("# processing method " + name)
+            //            val r = annotateWith(tpe, Annotation.sideEffect)
+            //            val r = annotateWith(rhs.tpe, Annotation.sideEffect)
+            val r = rhs.tpe
+
+            println("@@ rhs-tpe: " + rhs.tpe)
+            println("@@ real rhs-tpe: " + t)
+            println("   yes:  " + r)
+            r
+            tree.setType(rhs.tpe)
+            println(" @ def " + d)
+            rhs.tpe
+          } else tpe
+          //TODO
+          tpe
+
+        //TODO still needed?
         case f @ Function(vparams, body) if !PureMethodChecker(f.symbol, "", RemoveUnnecessaryApplySideEffect.transform(body)).isEmpty ⇒
           //impure function, so annotate the return type
           tpe match {
@@ -50,12 +79,12 @@ abstract class SideEffectChecker extends PuscaDefinitions {
     }
 
     override def canAdaptAnnotations(tree: Tree, mode: Int, pt: Type): Boolean = {
-      //println("# canAdapt  tree=" + tree + "  mode=" + mode + "  pt=" + pt)
+      //      println("# canAdapt  tree=" + tree + "  mode=" + analyzer.modeString(mode) + "  pt=" + pt + "  class=" + tree.getClass)
       tree match {
-        case ApplySideEffect(_) ⇒ false
+        case a @ ApplySideEffect(_) ⇒ false
         case a: Apply if hasAnnotation(a.tpe, Annotation.sideEffect) ⇒ true
-        case i: Ident if (hasAnnotation(i.tpe, Annotation.sideEffect)) ⇒ true
-        case s: Select if (hasAnnotation(s.tpe, Annotation.sideEffect)) ⇒ true
+        case i: Ident if hasAnnotation(i.tpe, Annotation.sideEffect) ⇒ true
+        case s: Select if hasAnnotation(s.tpe, Annotation.sideEffect) ⇒ true
         case _ ⇒ false
       }
     }
@@ -63,12 +92,13 @@ abstract class SideEffectChecker extends PuscaDefinitions {
     protected def applySideEffectFun = Select(Ident(puscaPackage.name.toTermName), "applySideEffect")
     protected def applySideEffect(v: Tree) = {
       val a = Apply(applySideEffectFun, v :: Nil)
+      a.symbol.setFlag(SYNTHETIC)
       a.pos = v.pos
       a
     }
 
     private[this] val recursive = new ThreadLocal[Boolean]
-    def recursiveSection[A](rec: A)(f: ⇒ A): A = {
+    def dontRecurse[A](rec: A)(f: ⇒ A): A = {
       if (recursive.get) rec
       else
         try {
@@ -78,18 +108,18 @@ abstract class SideEffectChecker extends PuscaDefinitions {
           recursive.set(false)
         }
     }
-    override def adaptAnnotations(tree: Tree, mode: Int, pt: Type): Tree = {
-      println("# adapt  tree=" + tree + "  mode=" + analyzer.modeString(mode) + "  pt=" + pt)
-      recursiveSection(tree) {
-        val localTyper = analyzer.newTyper(analyzer.rootContext(currentRun.currentUnit, tree, false))
-        val nt = applySideEffect(tree)
+    override def adaptAnnotations(tree: Tree, mode: Int, pt: Type): Tree = tree match {
+      case tree ⇒
+        println("# adapt  tree=" + tree + "  mode=" + analyzer.modeString(mode) + "  pt=" + pt)
+        dontRecurse(tree) {
+          val localTyper = analyzer.newTyper(analyzer.rootContext(currentRun.currentUnit, tree, false))
+          val nt = applySideEffect(tree)
 
-        localTyper.typed(nt)
-      }
+          localTyper.typed(nt)
+        }
     }
 
-    override def adaptBoundsToAnnotations(bounds: List[TypeBounds],
-                                          tparams: List[Symbol], targs: List[Type]): List[TypeBounds] = {
+    override def adaptBoundsToAnnotations(bounds: List[TypeBounds], tparams: List[Symbol], targs: List[Type]): List[TypeBounds] = {
       //println("# Bounds bounds=" + bounds + "   tparams" + tparams + "    " + targs)
       bounds.zip(targs).map { e ⇒
         val (bound, targ) = e
