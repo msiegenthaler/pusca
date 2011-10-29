@@ -6,17 +6,16 @@ import org.junit.Test
 import PluginTester._
 
 class PurityDefinitionTest extends JUnitSuite with ShouldMatchersForJUnit {
-
   private def assertPure(definition: String, call: String) = {
     val a = "@pure def checker = " + call
     new PluginTester().fromString(definition).fromString(a).run should compile
   }
   private def assertImpure(definition: String, call: String) = {
     val a = "@pure def checker = " + call
-    val b = "@impure def impureChecker = " + call
+    val b = "@impure def impureChecker = { " + call + "; () }"
     new PluginTester().fromString(definition).run should compile
     new PluginTester().fromString(definition).fromString(a).fromString(b).run should
-      yieldCompileError("method 'checker' has @pure annotation and a @sideEffect return type")
+      yieldCompileError("impure method call inside the pure method 'checker'")
   }
 
   @Test def defPureFunctionImplicit {
@@ -28,7 +27,7 @@ class PurityDefinitionTest extends JUnitSuite with ShouldMatchersForJUnit {
 
   @Test def defImpureFunction {
     assertImpure("@impure def ip(a: Int) = 10", "ip(10)")
-  }
+  } 
   @Test def defImpureFunctionSideEffectUnit {
     assertImpure("def ip(a: Int): Unit @sideEffect = ()", "ip(10)")
   }
