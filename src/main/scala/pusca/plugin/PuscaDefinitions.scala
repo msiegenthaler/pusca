@@ -30,19 +30,22 @@ trait PuscaDefinitions {
   protected lazy val puscaPackage = definitions.getModule("pusca")
   protected lazy val applySideEffectMethod = definitions.getMember(puscaPackage, "applySideEffect")
   protected lazy val addSideEffectMethod = definitions.getMember(puscaPackage, "addSideEffect")
+  protected lazy val packageObject = stringToTermName("package")
 
   object ApplySideEffect {
     def unapply(t: Tree) = t match {
-      case Apply(TypeApply(Select(Select(Ident(p), pko), mn), _), arg :: Nil) if p == puscaPackage.name && pko == stringToTermName("package") && mn == applySideEffectMethod.name ⇒
+      case Apply(TypeApply(Select(Select(Ident(p), pko), mn), _), arg :: Nil) if p == puscaPackage.name && pko == packageObject && mn == applySideEffectMethod.name ⇒
         Some(arg)
-      case Apply(Select(Select(Ident(p), pko), mn), arg :: Nil) if p == puscaPackage.name && pko == stringToTermName("package") && mn == applySideEffectMethod.name ⇒
+      case Apply(Select(Select(Ident(p), pko), mn), arg :: Nil) if p == puscaPackage.name && pko == packageObject && mn == applySideEffectMethod.name ⇒
         Some(arg)
       case _ ⇒ None
     }
   }
   object AddSideEffect {
     def unapply(t: Tree) = t match {
-      case Apply(TypeApply(Select(Select(Ident(p), pko), mn), _), arg :: Nil) if p == puscaPackage.name && pko == stringToTermName("package") && mn == addSideEffectMethod.name ⇒
+      case Apply(TypeApply(Select(Select(Ident(p), pko), mn), _), arg :: Nil) if p == puscaPackage.name && pko == packageObject && mn == addSideEffectMethod.name ⇒
+        Some(arg)
+      case Apply(Select(Select(Ident(p), pko), mn), arg :: Nil) if p == puscaPackage.name && pko == packageObject && mn == addSideEffectMethod.name ⇒
         Some(arg)
       case _ ⇒ None
     }
@@ -79,7 +82,7 @@ trait PuscaDefinitions {
 
     private[this] def handle(obj: Symbol, objName: String)(t: Tree, soFar: List[Error]): List[Error] = t match {
       case a @ ApplySideEffect(impure) ⇒
-      	println("## found as "+a)
+        println("## found applySideEffect on " + impure)
         Error(a.pos, "impure method call inside the pure " + objName) :: soFar
 
       case a @ Assign(lhs, rhs) if (!lhs.symbol.ownerChain.contains(obj)) ⇒ // assign to var outside the scope of this method
