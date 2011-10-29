@@ -10,7 +10,7 @@ import PluginTester._
 class PurityTest extends JUnitSuite with ShouldMatchersForJUnit {
 
   def code(s: String) = {
-    new PluginTester().fromString("@impure def ip(i: Int): Int @sideEffect = 10").fromString(s).run
+    new PluginTester().fromString("@impure def ip(i: Int): Int @sideEffect = 10\n" + s).run
   }
 
   @Test def pureFunctionMustNotCallImpureFunctionLast {
