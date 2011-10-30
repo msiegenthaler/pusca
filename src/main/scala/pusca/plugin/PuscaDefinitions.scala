@@ -5,8 +5,6 @@ trait PuscaDefinitions {
   val global: Global
   import global._
 
-  final val RETURN_PATH = 0xA00000000000L
-
   protected object Annotation {
     def apply(annotation: Symbol): AnnotationInfo = AnnotationInfo(annotation.tpe, Nil, Nil)
 
