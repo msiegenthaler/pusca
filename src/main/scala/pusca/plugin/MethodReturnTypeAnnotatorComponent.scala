@@ -31,10 +31,8 @@ class MethodReturnTypeAnnotatorComponent(val global: Global) extends PluginCompo
         val ndef = treeCopy.DefDef(d, d.mods, d.name, d.tparams, d.vparamss, ntpt, d.rhs)
         super.transform(ndef)
       case d @ DefDef(_, _, _, _, tpt, rhs) if hasAnnotation(d, Annotation.impure) && !hasAnnotation(d.tpt, Annotation.sideEffect) ⇒ tpt match {
-        case TypeTree() ⇒ //unspecified return type, is handled in markMethodReturnPath phase 
-          val nrhs = addSideEffect(transform(d.rhs))
-          treeCopy.DefDef(d, d.mods, d.name, d.tparams, d.vparamss, tpt, nrhs)
-
+        case TypeTree() ⇒ //unspecified return type, is handled in markMethodReturnPath phase
+          super.transform(d)
         case tpt ⇒
           val ntpt = annotate(d.tpt, Annotation.sideEffect)
           val ndef = treeCopy.DefDef(d, d.mods, d.name, d.tparams, d.vparamss, ntpt, d.rhs)

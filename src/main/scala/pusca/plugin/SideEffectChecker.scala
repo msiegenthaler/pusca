@@ -131,8 +131,9 @@ abstract class SideEffectChecker extends PuscaDefinitions {
         case MarkReturnValue(ApplySideEffect(a), _) ⇒ //remove applySideEffect on the method's return path
           a
         case MarkReturnValue(a, true) if !hasAnnotation(a.tpe, Annotation.sideEffect) ⇒ //addSideEffect on return path
-          typed(addSideEffect(tree))
-        case MarkReturnValue(a, _) ⇒ a
+          typed(addSideEffect(a))
+        case MarkReturnValue(a, _) ⇒
+        	a
 
         case tree ⇒
           typed(applySideEffect(tree))
