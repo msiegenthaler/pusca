@@ -34,6 +34,7 @@ trait PuscaDefinitions {
   protected lazy val applySideEffectMethod = definitions.getMember(puscaPackage, "applySideEffect")
   protected lazy val addSideEffectMethod = definitions.getMember(puscaPackage, "addSideEffect")
   protected lazy val markReturnValueMethod = definitions.getMember(puscaPackage, "markReturnValue")
+  protected lazy val markReturnValueWithSideEffectMethod = definitions.getMember(puscaPackage, "markReturnValueWithSideEffect")
 
   object ApplySideEffect {
     def unapply(t: Tree) = t match {
@@ -46,9 +47,7 @@ trait PuscaDefinitions {
   }
   object AddSideEffect {
     def unapply(t: Tree) = t match {
-      case Apply(TypeApply(Select(Select(Ident(p), pko), mn), _), arg :: Nil) if p == puscaPackage.name && pko == packageObject && mn == addSideEffectMethod.name ⇒
-        Some(arg)
-      case Apply(Select(Select(Ident(p), pko), mn), arg :: Nil) if p == puscaPackage.name && pko == packageObject && mn == addSideEffectMethod.name ⇒
+      case Apply(TypeApply(Select(Select(Ident(p), pko), mn), _), arg :: Nil) if p == puscaPackage.name && pko == stringToTermName("package") && mn == addSideEffectMethod.name ⇒
         Some(arg)
       case _ ⇒ None
     }
@@ -56,9 +55,13 @@ trait PuscaDefinitions {
   object MarkReturnValue {
     def unapply(t: Tree) = t match {
       case Apply(TypeApply(Select(Select(Ident(p), pko), mn), _), arg :: Nil) if p == puscaPackage.name && pko == packageObject && mn == markReturnValueMethod.name ⇒
-        Some(arg)
+        Some(arg, false)
       case Apply(Select(Select(Ident(p), pko), mn), arg :: Nil) if p == puscaPackage.name && pko == packageObject && mn == markReturnValueMethod.name ⇒
-        Some(arg)
+        Some(arg, false)
+      case Apply(TypeApply(Select(Select(Ident(p), pko), mn), _), arg :: Nil) if p == puscaPackage.name && pko == packageObject && mn == markReturnValueWithSideEffectMethod.name ⇒
+        Some(arg, true)
+      case Apply(Select(Select(Ident(p), pko), mn), arg :: Nil) if p == puscaPackage.name && pko == packageObject && mn == markReturnValueWithSideEffectMethod.name ⇒
+        Some(arg, true)
       case _ ⇒ None
     }
   }

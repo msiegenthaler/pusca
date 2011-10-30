@@ -11,6 +11,7 @@ package object pusca {
   /** INTERNAL: just a marker */
   //TODO maybe make private?
   def markReturnValue[A](a: A): A @returned = a
+  def markReturnValueWithSideEffect[A](a: A): A @returned @sideEffect = a
   class returned extends StaticAnnotation with TypeConstraint
 
 }

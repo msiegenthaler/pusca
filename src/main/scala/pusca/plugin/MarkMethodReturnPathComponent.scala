@@ -17,31 +17,33 @@ class MarkMethodReturnPathComponent(val global: Global) extends PluginComponent 
   class MarkMethodReturnPath extends Transformer {
     override def transform(tree: Tree): Tree = tree match {
       case d: DefDef ⇒
-        val nrhs = transformReturn(d.rhs)
+        val needToAddSideEffect = hasAnnotation(d, Annotation.impure) && !hasAnnotation(d.tpt, Annotation.sideEffect)
+        val nrhs = transformReturn(d.rhs, needToAddSideEffect)
         treeCopy.DefDef(d, d.mods, d.name, d.tparams, d.vparamss, d.tpt, nrhs)
       case other ⇒ super.transform(other)
     }
 
     protected def markerFun = Select(Ident("pusca"), "markReturnValue")
-    protected def mark(v: Tree) = {
-      val a = Apply(markerFun, v :: Nil)
+    protected def markerSideEffectFun = Select(Ident("pusca"), "markReturnValueWithSideEffect")
+    protected def mark(v: Tree, addSideEffect: Boolean) = {
+      val f = if (addSideEffect) markerSideEffectFun else markerFun
+      val a = Apply(f, v :: Nil)
       a.pos = v.pos
       a
     }
-    def transformReturn(tree: Tree): Tree = {
+    def transformReturn(tree: Tree, addSideEffect: Boolean): Tree = {
       tree match {
         case a @ Apply(fun, args) ⇒
-          //          treeCopy.Apply(a, mark(fun), args)
           println("# Marked " + a)
-          val r = mark(a)
-          println("    now "+r)
+          val r = mark(a, addSideEffect)
+          println("    now " + r)
           r
-          
+
         case b @ Block(stmts, expr) ⇒
-          val ne = transformReturn(expr)
+          val ne = transformReturn(expr, addSideEffect)
           treeCopy.Block(b, stmts, ne)
-          
         //TODO if, match, try, ...
+          
         case other ⇒ super.transform(other)
       }
     }
