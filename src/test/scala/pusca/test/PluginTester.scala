@@ -13,9 +13,9 @@ object PluginTester {
 
   class CompilesMatcher extends Matcher[PluginTestResult] {
     override def apply(r: PluginTestResult) = {
-      MatchResult(r.compiled && r.warnings.isEmpty && r.exception.isEmpty, 
-          "The compilation failed: " + (r.compileErrors :: r.warnings :: r.exception.map(e => List(e.toString)).getOrElse(Nil)).mkString(", "),
-          "The compilation did not fail")
+      MatchResult(r.compiled && r.warnings.isEmpty && r.exception.isEmpty,
+        "The compilation failed: " + (r.compileErrors :: r.warnings :: r.exception.map(e ⇒ List(e.toString)).getOrElse(Nil)).mkString(", "),
+        "The compilation did not fail")
     }
   }
   class CompileErrorMatcher(expect: List[String]) extends Matcher[PluginTestResult] {
@@ -106,7 +106,9 @@ class PluginTester {
 
       PluginTestResult(out.toString, None, if (errors.isEmpty) cs else errors, warnings)
     } catch {
-      case e ⇒ PluginTestResult(out.toString, Some(e), Nil, Nil)
+      case e ⇒
+        e.printStackTrace
+        PluginTestResult(out.toString, Some(e), Nil, Nil)
     }
   }
 }
