@@ -10,10 +10,29 @@ class SideEffectAnnotationTest extends JUnitSuite with ShouldMatchersForJUnit {
     code("def a: Int @sideEffect = 10") should compile
   }
 
-  @Test def cannotReturnIntSideEffectWhenDefinedInt {
+  @Test def cannotReturnIntSideEffectWhenDefinedIntAndPure {
     code("""
         def a: Int @sideEffect = 10
-        def b: Int = a""") should yieldCompileError("type mismatch")
+        @pure def b: Int = a""") should yieldCompileError("impure method call inside the pure method 'b'")
+  }
+
+  @Test def cannotReturnIntSideEffectWhenDefinedIntAndReturningInt {
+    code("""
+        def a: Int @sideEffect = 10
+        def b: Int = {
+        	a
+        	10
+    		}""") should yieldCompileError("impure method call inside the pure method 'b'")
+  }
+
+  @Test def canReturnIntSideEffectWhenOnlyDefinedInt1 {
+    code("""
+        def b: Int = addSideEffect(10)""") should yieldCompileError("impure method call inside the pure method 'b'")
+  }
+  @Test def cannotReturnIntSideEffectWhenDefinedInt2 {
+  	code("""
+  			def a: Int @sideEffect = 10
+  			def b: Int = a""") should yieldCompileError("impure method call inside the pure method 'b'")
   }
 
   @Test def methodNotSideEffectOverrideSideEffect {
@@ -35,7 +54,7 @@ class SideEffectAnnotationTest extends JUnitSuite with ShouldMatchersForJUnit {
     code("""
         def a: Int @sideEffect = 10
         def b = a
-        def c: Int = b""") should yieldCompileError("type mismatch")
+        def c: Int = b""") should yieldCompileError("impure method call inside the pure method 'c'")
   }
 
   @Test def sideEffectIsAValidTypeParameter {
@@ -79,6 +98,6 @@ class SideEffectAnnotationTest extends JUnitSuite with ShouldMatchersForJUnit {
           		override def apply(i: Int) = i.toString
       			})
           def c: String = b 
-          """) should yieldCompileError("type mismatch")
+          """) should yieldCompileError("impure method call inside the pure method 'c'")
   }
 }
