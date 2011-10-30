@@ -20,7 +20,7 @@ class MarkMethodReturnPathComponent(val global: Global) extends PluginComponent 
         val needToAddSideEffect = hasAnnotation(d, Annotation.impure) && !hasAnnotation(d.tpt, Annotation.sideEffect)
         val nrhs = transformReturn(d.rhs, needToAddSideEffect)
         treeCopy.DefDef(d, d.mods, d.name, d.tparams, d.vparamss, d.tpt, nrhs)
-      case f: Function =>
+      case f: Function ⇒
         val nb = transformReturn(f.body, false)
         treeCopy.Function(f, f.vparams, nb)
       case other ⇒ super.transform(other)
@@ -36,9 +36,10 @@ class MarkMethodReturnPathComponent(val global: Global) extends PluginComponent 
     }
     def transformReturn(tree: Tree, se: Boolean): Tree = {
       tree match {
-        case a: Apply  ⇒ mark(a, se)
-        case i: Ident  ⇒ mark(i, se)
-        case s: Select ⇒ mark(s, se)
+        case a: Apply   ⇒ mark(a, se)
+        case i: Ident   ⇒ mark(i, se)
+        case s: Select  ⇒ mark(s, se)
+        case l: Literal ⇒ mark(l, se)
 
         case b @ Block(stmts, expr) ⇒
           val ne = transformReturn(expr, se)
