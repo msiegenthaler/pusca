@@ -103,6 +103,9 @@ abstract class SideEffectChecker extends PuscaDefinitions {
         case MarkReturnValue(a, _) ⇒
           a
 
+        case a @ Apply(f @ Select(Super(This(_), _), n), _) if n == stringToTermName("<init>") ⇒
+          a
+
         case tree ⇒
           typed(applySideEffect(tree))
       }

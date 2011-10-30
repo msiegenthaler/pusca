@@ -85,7 +85,7 @@ class OverrideTest extends JUnitSuite with ShouldMatchersForJUnit {
     code("""
   			trait A { def a: String }
   			class B extends A { @impure override def a = "Hi" }""") should
-  				yieldCompileError("type mismatch")
+  				yieldCompileError("overriding method a in trait A of type => String")
   }
   
   @Test def impureMayNotOverridePureNonAbstractSideEffect {
@@ -99,7 +99,7 @@ class OverrideTest extends JUnitSuite with ShouldMatchersForJUnit {
     code("""
   			trait A { def a: String = "Ho" }
   	    class B extends A { @impure override def a = "Hi" }""") should
-  	    	yieldCompileError("type mismatch")
+  	    	yieldCompileError("overriding method a in trait A of type => String")
   }
   
   @Test def cannotExtendClassWithImpureConstructorWithAPureOne {
@@ -107,6 +107,6 @@ class OverrideTest extends JUnitSuite with ShouldMatchersForJUnit {
         @impure def ip(s: String) = ()
   			@impure class A { ip("hi") }
   			@pure class B extends A""") should
-      yieldCompileError("impure function call inside the pure function '<init>'")
+      yieldCompileError("The pure class 'B' has impure parent: 'A'")
   }
 }
