@@ -33,3 +33,9 @@ can be used. Example:
 LIMITATIONS:
  - Type Parameter on methods that take impure functions as parameter may need to be specified explicitly
     - see HigherLevelFunctionsWithInferenceTest
+    - Problem seems to be within the Scala inferencer, on 
+    		m[A](f: Function[String,A]): A
+    	that is called with
+    		val f: String => Int @sideEffect = it _
+      infers A to Int instead of Int @sideEffect. The only calls to the AnnotationCheckers are
+      to annotationsConform(), where we can't fix the problem. 
