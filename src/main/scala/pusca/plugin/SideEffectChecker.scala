@@ -15,6 +15,7 @@ abstract class SideEffectChecker extends PuscaDefinitions {
     private def withSideEffect(tpe: Type) = annotateWith(tpe, Annotation.sideEffect)
 
     def annotationsConform(tpe1: Type, tpe2: Type): Boolean = {
+      //println("# annotationsConform " + tpe1 + "   " + tpe2)
       hasSideEffect(tpe2) || !hasSideEffect(tpe1)
     }
 
