@@ -104,7 +104,7 @@ abstract class SideEffectChecker extends PuscaDefinitions {
     }
     protected def addSideEffectFun = Select(Ident(puscaPackage.name.toTermName), "addSideEffect")
     protected def addSideEffect(v: Tree) = {
-      val a = Apply(applySideEffectFun, v :: Nil)
+      val a = Apply(addSideEffectFun, v :: Nil)
       a.symbol.setFlag(SYNTHETIC)
       a.pos = v.pos
       a
