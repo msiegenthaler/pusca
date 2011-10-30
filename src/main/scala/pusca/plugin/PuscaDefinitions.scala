@@ -5,6 +5,8 @@ trait PuscaDefinitions {
   val global: Global
   import global._
 
+  final val RETURN_PATH = 0xA00000000000L
+
   protected object Annotation {
     def apply(annotation: Symbol): AnnotationInfo = AnnotationInfo(annotation.tpe, Nil, Nil)
 
@@ -28,9 +30,10 @@ trait PuscaDefinitions {
   }
 
   protected lazy val puscaPackage = definitions.getModule("pusca")
+  protected lazy val packageObject = stringToTermName("package")
   protected lazy val applySideEffectMethod = definitions.getMember(puscaPackage, "applySideEffect")
   protected lazy val addSideEffectMethod = definitions.getMember(puscaPackage, "addSideEffect")
-  protected lazy val packageObject = stringToTermName("package")
+  protected lazy val markReturnValueMethod = definitions.getMember(puscaPackage, "markReturnValue")
 
   object ApplySideEffect {
     def unapply(t: Tree) = t match {
@@ -46,6 +49,15 @@ trait PuscaDefinitions {
       case Apply(TypeApply(Select(Select(Ident(p), pko), mn), _), arg :: Nil) if p == puscaPackage.name && pko == packageObject && mn == addSideEffectMethod.name ⇒
         Some(arg)
       case Apply(Select(Select(Ident(p), pko), mn), arg :: Nil) if p == puscaPackage.name && pko == packageObject && mn == addSideEffectMethod.name ⇒
+        Some(arg)
+      case _ ⇒ None
+    }
+  }
+  object MarkReturnValue {
+    def unapply(t: Tree) = t match {
+      case Apply(TypeApply(Select(Select(Ident(p), pko), mn), _), arg :: Nil) if p == puscaPackage.name && pko == packageObject && mn == markReturnValueMethod.name ⇒
+        Some(arg)
+      case Apply(Select(Select(Ident(p), pko), mn), arg :: Nil) if p == puscaPackage.name && pko == packageObject && mn == markReturnValueMethod.name ⇒
         Some(arg)
       case _ ⇒ None
     }
