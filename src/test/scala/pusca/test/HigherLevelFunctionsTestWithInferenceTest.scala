@@ -6,6 +6,27 @@ import org.junit.Test
 import PluginTester._
 
 class HigherLevelFunctionsWithInferenceTest extends JUnitSuite with ShouldMatchersForJUnit {
+  @Test def functionWithTypeParameterIncludesPurenessOnImpureWithVal {
+  	code("""
+  			def m[A](f: String => A): A = f("Hello")
+  			@impure def il(i: String) = i.length
+  			@pure def x = {
+  	    	val f: Function[String,Int @sideEffect] = il _
+  	    	val r = m(f)
+  	    	r
+  			}
+  	""") should yieldCompileError("method 'x' has @pure annotation and a @sideEffect return type")
+  }
+  @Test def functionWithTypeParameterIncludesPurenessOnImpureWithInferedVal {
+  	code("""
+  			def m[A](f: String => A): A = f("Hello")
+  			@impure def il(i: String) = i.length
+  			@pure def x = {
+  	    	val f = il _
+  	    	m(f)
+  			}
+  	""") should yieldCompileError("method 'x' has @pure annotation and a @sideEffect return type")
+  }
   @Test def functionWithTypeParameterIncludesPurenessOnImpureWithAnon {
   	code("""
   			def m[A](f: String => A): A = f("Hello")
@@ -13,7 +34,6 @@ class HigherLevelFunctionsWithInferenceTest extends JUnitSuite with ShouldMatche
   			@pure def x = m(il _)
   	""") should yieldCompileError("method 'x' has @pure annotation and a @sideEffect return type")
   }
-
   @Test def functionWithTypeParameterIncludesPurenessOnImpureWithAnonMiddle {
     code("""
   			def m[A](f: String => A): A = f("Hello")
