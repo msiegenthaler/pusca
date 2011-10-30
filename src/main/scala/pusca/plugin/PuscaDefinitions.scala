@@ -97,7 +97,6 @@ trait PuscaDefinitions {
 
     private[this] def handle(obj: Symbol, objName: String)(t: Tree, soFar: List[Error]): List[Error] = t match {
       case a @ ApplySideEffect(impure) ⇒
-        println("## found applySideEffect on " + impure)
         Error(a.pos, "impure method call inside the pure " + objName) :: soFar
 
       case a @ Assign(lhs, rhs) if (!lhs.symbol.ownerChain.contains(obj)) ⇒ // assign to var outside the scope of this method
