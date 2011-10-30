@@ -6,7 +6,6 @@ import org.junit.Test
 import PluginTester._
 
 class HigherLevelFunctionsTest extends JUnitSuite with ShouldMatchersForJUnit {
-  /*
   @Test def functionWithSideEffectIsNotCompatibleWithPure {
     code("""
         @pure def m(f: String => Int) = {
@@ -174,7 +173,7 @@ class HigherLevelFunctionsTest extends JUnitSuite with ShouldMatchersForJUnit {
   	    	"Huhu"
   			}
   		""") should yieldCompileError("no type parameters for method m")
-  }*/
+  }
 
   @Test def functionWithTypeParameterCalledFromImpureWithImpure {
     code("""
