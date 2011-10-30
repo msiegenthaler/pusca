@@ -84,7 +84,8 @@ abstract class SideEffectChecker extends PuscaDefinitions {
 
     override def canAdaptAnnotations(tree: Tree, mode: Int, pt: Type): Boolean = {
       //println("# canAdapt  tree=" + tree + "  mode=" + analyzer.modeString(mode) + "  pt=" + pt + "  class=" + tree.getClass)
-      tree match {
+      if ((mode & analyzer.EXPRmode) == 0 || (mode & analyzer.LHSmode) != 0) false
+      else tree match {
         case a @ ApplySideEffect(_) ⇒ false
         case a @ MarkReturnValue(_, _) ⇒ true
         case a: Apply if hasAnnotation(a.tpe, Annotation.sideEffect) ⇒ true
