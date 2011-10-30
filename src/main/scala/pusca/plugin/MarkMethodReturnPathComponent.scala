@@ -31,16 +31,26 @@ class MarkMethodReturnPathComponent(val global: Global) extends PluginComponent 
       a.pos = v.pos
       a
     }
-    def transformReturn(tree: Tree, addSideEffect: Boolean): Tree = {
+    def transformReturn(tree: Tree, se: Boolean): Tree = {
       tree match {
-        case a: Apply  ⇒ mark(a, addSideEffect)
-        case i: Ident  ⇒ mark(i, addSideEffect)
-        case s: Select ⇒ mark(s, addSideEffect)
+        case a: Apply  ⇒ mark(a, se)
+        case i: Ident  ⇒ mark(i, se)
+        case s: Select ⇒ mark(s, se)
 
         case b @ Block(stmts, expr) ⇒
-          val ne = transformReturn(expr, addSideEffect)
+          val ne = transformReturn(expr, se)
           treeCopy.Block(b, stmts, ne)
-        //TODO if, match, try, ...
+        case i @ If(c, t, e) ⇒
+          treeCopy.If(i, c, transformReturn(t, se), transformReturn(e, se))
+        case m @ Match(sel, cases) ⇒
+          val nc = cases.map(transformReturn(_, se).asInstanceOf[CaseDef])
+          treeCopy.Match(m, sel, nc)
+        case t @ Try(b, cs, f) ⇒
+          val ncs = cs.map(transformReturn(_, se).asInstanceOf[CaseDef])
+          if (f.isEmpty) treeCopy.Try(t, transformReturn(b, se), ncs, f)
+          else treeCopy.Try(t, b, ncs, transformReturn(f, se))
+        case c @ CaseDef(p, g, expr) ⇒
+          treeCopy.CaseDef(c, p, g, transformReturn(expr, se))
 
         case other ⇒ super.transform(other)
       }
