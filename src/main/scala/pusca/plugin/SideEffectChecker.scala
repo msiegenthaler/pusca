@@ -31,37 +31,7 @@ abstract class SideEffectChecker extends PuscaDefinitions {
 
     override def addAnnotations(tree: Tree, tpe: Type): Type = {
       //            println("# addAnnotations type of tree=" + tree.getClass + "   tpe=" + tpe + "\n       tree=" + tree)
-      /*
       tree match {
-        case d @ DefDef(mods, name, tparams, vparamss, tpt, rhs) if name == stringToTermName("ip2") ⇒ //TODO
-          val last = rhs match {
-            case Block(_, expr) ⇒ expr
-            case other          ⇒ other
-          }
-          val t = last match {
-            //TODO add check for synthetic
-            case ApplySideEffect(f) ⇒ f.tpe
-            case o                  ⇒ o.tpe
-          }
-
-          if (hasAnnotation(t, Annotation.sideEffect)) {
-            println("# processing method " + name)
-            val r = annotateWith(tpe, Annotation.sideEffect)
-            //            val r = annotateWith(rhs.tpe, Annotation.sideEffect)
-//            val r = rhs.tpe
-
-            println("@@ rhs-tpe: " + rhs.tpe)
-            println("@@ real rhs-tpe: " + t)
-            println("   yes:  " + r)
-            r
-            tree.setType(rhs.tpe)
-            println(" @ def " + d)
-            r
-          } else tpe
-          //TODO
-          tpe
-
-        //TODO still needed?
         case f @ Function(vparams, body) if !PureMethodChecker(f.symbol, "", RemoveUnnecessaryApplySideEffect.transform(body)).isEmpty ⇒
           //impure function, so annotate the return type
           tpe match {
@@ -78,8 +48,6 @@ abstract class SideEffectChecker extends PuscaDefinitions {
           }
         case _ ⇒ tpe
       }
-      */
-      tpe
     }
 
     override def canAdaptAnnotations(tree: Tree, mode: Int, pt: Type): Boolean = {
@@ -125,7 +93,7 @@ abstract class SideEffectChecker extends PuscaDefinitions {
       lazy val localTyper = analyzer.newTyper(analyzer.rootContext(currentRun.currentUnit, tree, false))
       def typed(a: Tree) = dontRecurse(tree)(localTyper.typed(a))
 
-      println("# adapt  tree=" + tree + "  mode=" + analyzer.modeString(mode) + "  pt=" + pt)
+      //println("# adapt  tree=" + tree + "  mode=" + analyzer.modeString(mode) + "  pt=" + pt)
       tree match {
         // get rid of all markReturnValue calls
         case MarkReturnValue(ApplySideEffect(a), _) ⇒ //remove applySideEffect on the method's return path
@@ -133,7 +101,7 @@ abstract class SideEffectChecker extends PuscaDefinitions {
         case MarkReturnValue(a, true) if !hasAnnotation(a.tpe, Annotation.sideEffect) ⇒ //addSideEffect on return path
           typed(addSideEffect(a))
         case MarkReturnValue(a, _) ⇒
-        	a
+          a
 
         case tree ⇒
           typed(applySideEffect(tree))
