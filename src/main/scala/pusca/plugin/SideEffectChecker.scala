@@ -15,7 +15,7 @@ abstract class SideEffectChecker extends PuscaDefinitions {
     private def withSideEffect(tpe: Type) = annotateWith(tpe, Annotation.sideEffect)
 
     def annotationsConform(tpe1: Type, tpe2: Type): Boolean = {
-      //println("# annotationsConform " + tpe1 + "   " + tpe2)
+      //println("# annotations " + tpe1 + " conforms to " + tpe2 + ": " + (hasSideEffect(tpe2) || !hasSideEffect(tpe1)))
       hasSideEffect(tpe2) || !hasSideEffect(tpe1)
     }
 
@@ -30,7 +30,7 @@ abstract class SideEffectChecker extends PuscaDefinitions {
     }
 
     override def addAnnotations(tree: Tree, tpe: Type): Type = {
-      //            println("# addAnnotations type of tree=" + tree.getClass + "   tpe=" + tpe + "\n       tree=" + tree)
+      //println("# addAnnotations type of tree=" + tree.getClass + "   tpe=" + tpe + "\n       tree=" + tree)
       tree match {
         case f @ Function(vparams, body) if !PureMethodChecker(f.symbol, "", RemoveUnnecessaryApplySideEffect.transform(body)).isEmpty ⇒
           //impure function, so annotate the return type
