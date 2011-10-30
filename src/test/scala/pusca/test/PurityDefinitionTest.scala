@@ -115,6 +115,6 @@ class PurityDefinitionTest extends JUnitSuite with ShouldMatchersForJUnit {
     code("""
         @impure def a: Int = 10
         def b = a
-        @pure def c = b""") should yieldCompileError("method 'c' has @pure annotation and a @sideEffect return type")
+        @pure def c = b""") should yieldCompileError("impure method call inside the pure method 'c'")
   }
 }

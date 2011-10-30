@@ -12,13 +12,11 @@ class PurityTest extends JUnitSuite with ShouldMatchersForJUnit {
   def code(s: String) = {
     new PluginTester().fromString("@impure def ip(i: Int): Int @sideEffect = 10\n" + s).run
   }
-
   @Test def pureFunctionMustNotCallImpureFunctionLast {
-    code("@pure def a = ip(10)") should yieldCompileError("method 'a' has @pure annotation and a @sideEffect return type")
+    code("@pure def a = ip(10)") should yieldCompileError("impure method call inside the pure method 'a'")
   }
-
   @Test def pureFunctionMustNotCallImpureFunctionLast2 {
-    code("@pure def a: Int = ip(10)") should yieldCompileError("type mismatch")
+    code("@pure def a: Int = ip(10)") should yieldCompileError("impure method call inside the pure method 'a'")
   }
 
   @Test def pureFunctionMustNotCallImpureFunctionMiddleWithoutAssignment {
