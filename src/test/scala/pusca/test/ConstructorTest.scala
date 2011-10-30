@@ -45,7 +45,7 @@ class ConstructorTest extends JUnitSuite with ShouldMatchersForJUnit {
   			@impure class A { var x = "Hi" }
   			@pure def makeA = new A
   		""") should
-  	yieldCompileError("method 'makeA' has @pure annotation and a @sideEffect return type")
+  	yieldCompileError("impure method call inside the pure method 'makeA'")
   }
   
   @Test def callingImpureNewLastMakesAMethodImpure {
@@ -54,7 +54,7 @@ class ConstructorTest extends JUnitSuite with ShouldMatchersForJUnit {
   			def makeA = new A
   	    @pure def run = makeA
   		""") should
-  	yieldCompileError("method 'run' has @pure annotation and a @sideEffect return type")
+  	yieldCompileError("impure method call inside the pure method 'run'")
   }
 
   @Test def constructorNotDeclaredImpureMayNotUseVars {
