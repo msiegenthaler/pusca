@@ -97,4 +97,14 @@ class HigherLevelFunctionsWithInferenceTest extends JUnitSuite with ShouldMatche
         @pure def x = m(l _)
       """) should compile
   }
+
+  @Test def methodWithOptionGetOrElseHasSideEffectIfGetOrElseHas {
+    code("""
+        @impure def ip = "Hello"
+        def m(o: Option[String]) = {
+    		o.getOrElse(ip)
+    	}
+        @pure def p = m(Some("Hi"))
+        """) should yieldCompileError("impure method call inside the pure method 'p'")
+  }
 }

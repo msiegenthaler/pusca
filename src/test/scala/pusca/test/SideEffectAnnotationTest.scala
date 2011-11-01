@@ -140,7 +140,7 @@ class SideEffectAnnotationTest extends JUnitSuite with ShouldMatchersForJUnit {
         @pure def p = m(true)
         """) should compile
   }
-  
+
   @Test def methodWithMatchWhereAllCasesHaveSideEffectIsImpure {
     code("""
         @impure def ip = "Hello"
@@ -173,7 +173,7 @@ class SideEffectAnnotationTest extends JUnitSuite with ShouldMatchersForJUnit {
     	}
         @pure def p = m(2)
         """) should yieldCompileError("impure method call inside the pure method 'p'")
-  }  
+  }
   @Test def methodWithMatchWhereNoCaseHasSideEffectIsPure {
     code("""
         def m(i: Int) = i match {
@@ -184,12 +184,12 @@ class SideEffectAnnotationTest extends JUnitSuite with ShouldMatchersForJUnit {
         @pure def p = m(2)
         """) should compile
   }
-  
+
   @Test def methodWithOptionGetOrElseHasSideEffectIfGetOrElseHas {
     code("""
         @impure def ip = "Hello"
         def m(o: Option[String]) = {
-    		o.getOrElse(ip)
+    		o.getOrElse[String @sideEffect](ip)
     	}
         @pure def p = m(Some("Hi"))
         """) should yieldCompileError("impure method call inside the pure method 'p'")
