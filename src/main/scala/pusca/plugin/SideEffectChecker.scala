@@ -26,7 +26,9 @@ abstract class SideEffectChecker extends PuscaDefinitions {
 
     override def annotationsLub(tp: Type, ts: List[Type]): Type = {
       //println("# Lub tp=" + tp + "    ts=" + ts)
-      tp
+      if (ts.find(hasAnnotation(_, Annotation.sideEffect)).isDefined && !hasAnnotation(tp, Annotation.sideEffect))
+        annotateWith(tp, Annotation.sideEffect)
+      else tp
     }
 
     override def addAnnotations(tree: Tree, tpe: Type): Type = {
