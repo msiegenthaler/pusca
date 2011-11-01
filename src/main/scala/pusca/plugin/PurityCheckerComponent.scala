@@ -12,6 +12,7 @@ class PurityCheckerComponent(val global: Global) extends PluginComponent with Pu
   import global._
 
   override val runsAfter = List("typer", "removeUnnecessaryApplySideEffect", "forbiddenSideEffectAssignment", "purityDeclarationConflictDetector", "uncurry")
+  override val runsBefore = List("tailcalls")
   val phaseName = "purityChecker"
   def newPhase(prev: Phase) = new PurityChecker(prev)
 
