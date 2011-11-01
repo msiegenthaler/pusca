@@ -30,7 +30,7 @@ class SideEffectAnnotationTest extends JUnitSuite with ShouldMatchersForJUnit {
         def b: Int = addSideEffect(10)""") should yieldCompileError("impure method call inside the pure method 'b'")
   }
   @Test def cannotReturnIntSideEffectWhenDefinedInt2 {
-  	code("""
+    code("""
   			def a: Int @sideEffect = 10
   			def b: Int = a""") should yieldCompileError("impure method call inside the pure method 'b'")
   }
@@ -99,5 +99,108 @@ class SideEffectAnnotationTest extends JUnitSuite with ShouldMatchersForJUnit {
       			})
           def c: String = b 
           """) should yieldCompileError("impure method call inside the pure method 'c'")
+  }
+
+  @Test def methodWithIfWhereBothBranchsAreSideEffectIsImpure {
+    code("""
+        @impure def ip = "Hello"
+        def m(v: Boolean) = {
+    		if (v) ip
+    		else ip
+    	}
+        @pure def p = m(true)
+        """) should yieldCompileError("impure method call inside the pure method 'p'")
+  }
+  @Test def methodWithIfWhereThenBranchIsSideEffectIsImpure {
+    code("""
+        @impure def ip = "Hello"
+        def m(v: Boolean) = {
+    		if (v) ip
+    		else "Hi"
+    	}
+        @pure def p = m(true)
+        """) should yieldCompileError("impure method call inside the pure method 'p'")
+  }
+  @Test def methodWithIfWhereElseBranchIsSideEffectIsImpure {
+    code("""
+        @impure def ip = "Hello"
+        def m(v: Boolean) = {
+    		if (v) "Hi"
+    		else ip
+    	}
+        @pure def p = m(true)
+        """) should yieldCompileError("impure method call inside the pure method 'p'")
+  }
+  @Test def methodWithIfWhereNoBranchsIsSideEffectIsPure {
+    code("""
+        def m(v: Boolean) = {
+    		if (v) "Hi"
+    		else "Ho"
+    	}
+        @pure def p = m(true)
+        """) should compile
+  }
+  
+  @Test def methodWithMatchWhereAllCasesHaveSideEffectIsImpure {
+    code("""
+        @impure def ip = "Hello"
+        def m(i: Int) = i match {
+    		case 1 => ip 
+    		case 2 => ip 
+    		case _ => ip 
+    	}
+        @pure def p = m(2)
+        """) should yieldCompileError("impure method call inside the pure method 'p'")
+  }
+  @Test def methodWithMatchWhereOneCaseHasSideEffectIsImpure {
+    code("""
+        @impure def ip = "Hello"
+        def m(i: Int) = i match {
+    		case 1 => ip 
+    		case 2 => "Hi" 
+    		case _ => "Ho"
+    	}
+        @pure def p = m(2)
+        """) should yieldCompileError("impure method call inside the pure method 'p'")
+  }
+  @Test def methodWithMatchWhereOneCaseHasSideEffectIsImpure2 {
+    code("""
+        @impure def ip = "Hello"
+        def m(i: Int) = i match {
+    		case 1 => "Hi" 
+    		case 2 => "Hi" 
+    		case _ => ip
+    	}
+        @pure def p = m(2)
+        """) should yieldCompileError("impure method call inside the pure method 'p'")
+  }  
+  @Test def methodWithMatchWhereNoCaseHasSideEffectIsPure {
+    code("""
+        def m(i: Int) = i match {
+    		case 1 => "Hu" 
+    		case 2 => "Hi" 
+    		case _ => "Ho"
+    	}
+        @pure def p = m(2)
+        """) should compile
+  }
+  
+  @Test def methodWithOptionGetOrElseHasSideEffectIfGetOrElseHas {
+    code("""
+        @impure def ip = "Hello"
+        def m(o: Option[String]) = {
+    		o.getOrElse(ip)
+    	}
+        @pure def p = m(Some("Hi"))
+        """) should yieldCompileError("impure method call inside the pure method 'p'")
+  }
+  @Test def methodWithOptionGetOrElseHasNoSideEffectIfGetOrElseHasNot {
+    code("""
+        def ip = "Hello"
+        def m(o: Option[String]) = {
+    		o.getOrElse(ip)
+    	}
+        @pure def p = m(Some("Hi"))
+        """) should compile
   }
 }
