@@ -51,8 +51,7 @@ class MarkMethodReturnPathComponent(val global: Global) extends PluginComponent 
           treeCopy.Match(m, sel, nc)
         case t @ Try(b, cs, f) ⇒
           val ncs = cs.map(transformReturn(_, se).asInstanceOf[CaseDef])
-          if (f.isEmpty) treeCopy.Try(t, transformReturn(b, se), ncs, f)
-          else treeCopy.Try(t, b, ncs, transformReturn(f, se))
+          treeCopy.Try(t, transformReturn(b, se), ncs, f)
         case c @ CaseDef(p, g, expr) ⇒
           treeCopy.CaseDef(c, p, g, transformReturn(expr, se))
 
