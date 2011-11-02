@@ -3,15 +3,15 @@ import scala.annotation.TypeConstraint
 package object pusca {
 
   /** removes the @sideEffect annotation */
-  def applySideEffect[A](a: A @sideEffect): A = a.asInstanceOf[A]
+  @inline def applySideEffect[A](a: A @sideEffect): A = a
 
   /** adds an @sideEffect annotation */
-  def addSideEffect[A](a: A): A @sideEffect = a
+  @inline def addSideEffect[A](a: A): A @sideEffect = a
 
   /** INTERNAL: just a marker */
   //TODO maybe make private?
-  def markReturnValue[A](a: A): A @returned = a
-  def markReturnValueWithSideEffect[A](a: A): A @returned @sideEffect = a
+  def markReturnValue[A](a: A): A @returned = throw new UnsupportedOperationException
+  def markReturnValueWithSideEffect[A](a: A): A @returned @sideEffect = throw new UnsupportedOperationException
   class returned extends StaticAnnotation with TypeConstraint
 
 }
