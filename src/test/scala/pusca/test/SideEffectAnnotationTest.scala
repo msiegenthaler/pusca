@@ -203,4 +203,122 @@ class SideEffectAnnotationTest extends JUnitSuite with ShouldMatchersForJUnit {
         @pure def p = m(Some("Hi"))
         """) should compile
   }
+  
+  @Test def methodWithTryWithSideEffectInFinallyIsImpure {
+    code("""
+        @impure def ip = "Hello"
+        def m(f: () => Int) = {
+    		try { f() }
+    		finally { ip }
+    	}
+        @pure def p = m(() => 10)
+        """) should yieldCompileError("impure method call inside the pure method 'm'")
+  }
+  @Test def methodWithTryWithSideEffectInFinallyAndBodyIsImpure {
+    code("""
+        @impure def ip = "Hello"
+        def m = {
+    		try { ip }
+    		finally { ip }
+    	}
+        @pure def p = m
+        """) should yieldCompileError("impure method call inside the pure method 'p'")
+  }
+  @Test def methodWithTryWithoutSideEffectInFinallyIsPure {
+    code("""
+        @impure def ip = "Hello"
+        def m(f: () => String) = {
+    		try { f() }
+    		finally { "Hi" }
+    	}
+        @pure def p = m(() => "Hi")
+        """) should compile
+  }
+  
+  @Test def methodWithTryWithSideEffectInCatchIsImpure {
+    code("""
+        @impure def ip = "Hello"
+        def m(f: () => String) = {
+    		try { f() }
+    		catch { case _ => ip }
+    	}
+        @pure def p = m(() => "Hi")
+        """) should yieldCompileError("impure method call inside the pure method 'p'")
+  }
+  @Test def methodWithTryWithSideEffectInOneCatchIsImpure {
+    code("""
+        @impure def ip = "Hello"
+        def m(f: () => String) = {
+    		try { f() }
+    		catch {
+    			case e: RuntimeException => "Huuu"
+    			case _ => ip
+    		}
+    	}
+        @pure def p = m(() => "Hi")
+        """) should yieldCompileError("impure method call inside the pure method 'p'")
+  }
+  @Test def methodWithTryWithSideEffectInCatchAndAPureFinallyIsImpure {
+    code("""
+        @impure def ip = "Hello"
+        def m(f: () => String) = {
+    		try { f() }
+    		catch {
+    			case e: RuntimeException => "Huuu"
+    			case _ => ip
+    		}
+    		finally { "Ho" }
+    	}
+		@pure def p = m(() => "Hi")
+        """) should yieldCompileError("impure method call inside the pure method 'p'")
+  }
+  @Test def methodWithTryWithSideEffectInOneCatchAndAPureFinallyIsImpure {
+    code("""
+        @impure def ip = "Hello"
+        def m(f: () => String) = {
+    		try { f() }
+    		catch {
+    			case e: RuntimeException => "Huuu"
+    			case _ => ip
+    		}
+    		finally { "Ho" }
+    	}
+   		@pure def p = m(() => "Hi")
+        """) should yieldCompileError("impure method call inside the pure method 'p'")
+  }
+  @Test def methodWithTryWithoutSideEffectInOneCatchIsPure {
+    code("""
+        @impure def ip = "Hello"
+        def m(f: () => String) = {
+    		try { f() }
+    		catch {
+    			case e: RuntimeException => "Huuu"
+    			case _ => "Haaa"
+    		}
+    	}
+        @pure def p = m(() => "Hi")
+        """) should compile
+  }
+
+  @Test def methodWithTryWithSideEffectInBodyIsImpure {
+    code("""
+        @impure def ip = "Hello"
+        def m = {
+    		try { ip }
+    		catch { case _ => "Ho" }
+    	}
+        @pure def p = m
+        """) should yieldCompileError("impure method call inside the pure method 'p'")
+  }
+  @Test def methodWithTryWithSideEffectInBodyAndPureFinallyIsImpure {
+    code("""
+        @impure def ip = "Hello"
+        def m = {
+    		try { ip }
+    		catch { case _ => "Ho" }
+            finally { "Bla" }
+    	}
+		@pure def p = m
+        """) should yieldCompileError("impure method call inside the pure method 'p'")
+  }
 }
