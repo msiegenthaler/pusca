@@ -108,6 +108,9 @@ abstract class SideEffectChecker extends PuscaDefinitions {
         case a @ Apply(f @ Select(Super(This(_), _), n), _) if n == stringToTermName("<init>") ⇒
           a
 
+        case a @ AddSideEffect(_) ⇒
+          a
+
         case tree ⇒
           typed(applySideEffect(tree))
       }
