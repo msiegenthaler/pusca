@@ -26,8 +26,8 @@ class MarkMethodReturnPathComponent(val global: Global) extends PluginComponent 
       case other ⇒ super.transform(other)
     }
 
-    protected def markerFun = Select(Ident("pusca"), "markReturnValue")
-    protected def markerSideEffectFun = Select(Ident("pusca"), "markReturnValueWithSideEffect")
+    protected def markerFun = Select(Ident("pusca"), "__internal__markReturnValue")
+    protected def markerSideEffectFun = Select(Ident("pusca"), "__internal__markReturnValueWithSideEffect")
     protected def mark(v: Tree, addSideEffect: Boolean) = {
       val f = if (addSideEffect) markerSideEffectFun else markerFun
       val a = Apply(f, v :: Nil)

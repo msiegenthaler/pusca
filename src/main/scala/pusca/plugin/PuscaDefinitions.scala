@@ -31,8 +31,8 @@ trait PuscaDefinitions {
   protected lazy val packageObject = stringToTermName("package")
   protected lazy val applySideEffectMethod = definitions.getMember(puscaPackage, "applySideEffect")
   protected lazy val addSideEffectMethod = definitions.getMember(puscaPackage, "addSideEffect")
-  protected lazy val markReturnValueMethod = definitions.getMember(puscaPackage, "markReturnValue")
-  protected lazy val markReturnValueWithSideEffectMethod = definitions.getMember(puscaPackage, "markReturnValueWithSideEffect")
+  protected lazy val markReturnValueMethod = definitions.getMember(puscaPackage, "__internal__markReturnValue")
+  protected lazy val markReturnValueWithSideEffectMethod = definitions.getMember(puscaPackage, "__internal__markReturnValueWithSideEffect")
 
   object ApplySideEffect {
     def unapply(t: Tree) = t match {
