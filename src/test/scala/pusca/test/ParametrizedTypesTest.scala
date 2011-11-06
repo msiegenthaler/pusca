@@ -9,34 +9,90 @@ import scala.annotation.StaticAnnotation
 
 class ParametrizedTypesTest extends JUnitSuite with ShouldMatchersForJUnit {
 
-  trait Function[A, B] {
-    @impureIf('B)
-    def apply(a: A): B
+  @Test def methodWithOneParameterPure {
+    code("""
+    		@impureIf('A) def x[A](f: String => A) = f("Hi")
+        @pure def p = {
+        	val f: String => Int = s => s.length
+        	x[Int](f)
+    		}
+        """) should compile
   }
-
-  class Box[A](content: A) {
-    @impureIf('B)
-    def map[B](f: Function[A, B]): Box[B] = {
-      val b = f(content)
-      new Box(b)
-    }
+  
+  @Test def methodWithOneParameterImpure {
+    code("""
+    		@impureIf('A) def x[A](f: String => A) = f("Hi")
+        @pure def p = {
+        	val f: String => Int @sideEffect = s => s.length
+        	x[Int @sideEffect](f)
+    		}
+        """) should yieldCompileError("impure method call inside the pure method 'p'")
   }
-
-  val box = new Box("Hi")
-
-  val f = new Function[String, Int] {
-    override def apply(a: String) = a.length
+  
+  @Test def boxForFunctionPure {
+    code("""
+        case class FBox[A,B](f: A => B) {
+        	@impureIf('B) def apply(a: A): B = f(a)
+    		}
+       	val box = FBox[String,Int](_.length)
+        @pure def p = box("Hi")
+        """) should compile
   }
-  val fi = new Function[String, Int @sideEffect] {
-    override def apply(a: String) = {
-      println(a)
-      a.length
-    }
+  @Test def boxForFunctionImpure {
+    code("""
+        case class FBox[A,B](f: A => B) {
+        	@impureIf('B) def apply(a: A): B = f(a)
+    		}
+       	val box = FBox[String,Int @sideEffect](_.length)
+        @pure def p = box("Hi")
+        """) should yieldCompileError("impure method call inside the pure method 'p'")
   }
-
-  //pure
-  val lb = box.map(f)
-  //impure
-  val lb_ip = box.map(fi)
+  
+  @Test def boxWithPreFunPure {
+    code("""
+        case class PFB[A,B,C](f: A => B, pf: () => C) {
+        	@impureIf('B,'C) def apply(a: A) = {
+        		pf()
+        		f(a)
+    			}
+    		}
+        val box = PFB[String,Int,Unit](_.length, () => ())
+        @pure def p = box("Hi")
+        """) should compile
+  }
+  @Test def boxWithPreFunImpureFun {
+    code("""
+        case class PFB[A,B,C](f: A => B, pf: () => C) {
+        	@impureIf('B,'C) def apply(a: A) = {
+        		pf()
+        		f(a)
+    			}
+    		}
+        val box = PFB[String,Int @sideEffect,Unit](_.length, () => ())
+        @pure def p = box("Hi")
+        """) should yieldCompileError("impure method call inside the pure method 'p'")
+  }
+  @Test def boxWithPreFunImpurePreFun {
+    code("""
+        case class PFB[A,B,C](f: A => B, pf: () => C) {
+        	@impureIf('B,'C) def apply(a: A) = {
+        		pf()
+        		f(a)
+    			}
+    		}
+        val box = PFB[String,Int,Unit @sideEffect](_.length, () => ())
+        @pure def p = box("Hi")
+        """) should yieldCompileError("impure method call inside the pure method 'p'")
+  }
+  @Test def boxWithPreFunUndeclaredDependencyOnPurenessOfB {
+    code("""
+        case class PFB[A,B,C](f: A => B, pf: () => C) {
+        	@impureIf('B) def apply(a: A) = {
+        		pf()
+        		f(a)
+    			}
+    		}
+        """) should yieldCompileError("impure method call inside the pure method 'apply'")
+  }
 
 }
