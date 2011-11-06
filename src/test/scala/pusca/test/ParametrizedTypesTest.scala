@@ -118,6 +118,6 @@ class ParametrizedTypesTest extends JUnitSuite with ShouldMatchersForJUnit {
         		f(a)
     			}
     		}
-        """) should yieldCompileError("impure method call inside the pure method 'apply'")
+        """) should yieldCompileError("impure method call inside the pure method 'PFB.apply'")
   }
 }
