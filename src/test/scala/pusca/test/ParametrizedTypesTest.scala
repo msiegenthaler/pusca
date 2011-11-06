@@ -8,8 +8,34 @@ import pusca._
 import scala.annotation.StaticAnnotation
 
 class ParametrizedTypesTest extends JUnitSuite with ShouldMatchersForJUnit {
-
   @Test def methodWithOneParameterPure {
+    code("""
+        @impureIf('A) def exec[A](f: () => A): String = {
+        	f()
+        	"Hi"
+    		}
+        @pure def p = exec[Int] { () => 10 } 
+        """) should compile
+  }
+  @Test def methodWithOneParameterImpure {
+    code("""
+        @impureIf('A) def exec[A](f: () => A): String = {
+        	f()
+        	"Hi"
+    		}
+        @pure def p = exec[Int @sideEffect] { () => 10 } 
+        """) should yieldCompileError("impure method call inside the pure method 'p'")
+  }
+  @Test def methodWithOneParameterNoDeclaration {
+    code("""
+        def exec[A](f: () => A): String = {
+        	f()
+        	"Hi"
+    		}
+        """) should yieldCompileError("impure method call inside the pure method 'exec'")
+  }
+
+  @Test def methodWithOneParameterRvPure {
     code("""
     		@impureIf('A) def x[A](f: String => A) = f("Hi")
         @pure def p = {
@@ -19,7 +45,7 @@ class ParametrizedTypesTest extends JUnitSuite with ShouldMatchersForJUnit {
         """) should compile
   }
   
-  @Test def methodWithOneParameterImpure {
+  @Test def methodWithOneParameterRvImpure {
     code("""
     		@impureIf('A) def x[A](f: String => A) = f("Hi")
         @pure def p = {
@@ -94,5 +120,4 @@ class ParametrizedTypesTest extends JUnitSuite with ShouldMatchersForJUnit {
     		}
         """) should yieldCompileError("impure method call inside the pure method 'apply'")
   }
-
 }
