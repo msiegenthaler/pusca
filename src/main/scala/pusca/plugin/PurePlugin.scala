@@ -14,7 +14,6 @@ class PurePlugin(val global: Global) extends Plugin {
     new PurityCheckerComponent(global),
     new ConstructorOverrideComponent(global),
     new MarkMethodReturnPathComponent(global),
-    new RemoveUnnecessaryApplySideEffectComponent(global),
     new DeclarationConflictDetectorComponent(global),
     new UnnecessaryDeclarePureComponent(global),
     new ForbiddenSideEffectAssignmentComponent(global),
@@ -30,7 +29,7 @@ class PurePlugin(val global: Global) extends Plugin {
     val global: PurePlugin.this.global.type = PurePlugin.this.global
     //override val runsAfter = List("markMethodReturnPath", "methodReturnTypeAnnotator")
     //override val runsRightAfter = Some("markMethodReturnPath")
-    override val runsAfter = List("typer", "forbiddenSideEffectAssignment", "removeUnnecessaryApplySideEffect")
+    override val runsAfter = List("typer", "forbiddenSideEffectAssignment")
     override val runsBefore = List("purityChecker")
     val phaseName = "showTree"
     def newPhase(_prev: Phase) = new ShowTreePhase(_prev)
