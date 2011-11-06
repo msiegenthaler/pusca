@@ -16,21 +16,25 @@ class pure extends PurenessAnnotation
  */
 class declarePure extends PurenessAnnotation
 
-/**
- * The pureness of the method depends on the type parameter of the method and the surrounding class. An example
- * is <code>Function2#apply(a: A): B</code>, which may be pure or impure depending on B.<br/>
- * Usually there is no need to use this annotation, since it's the default for pureness.
- */
-class dependentPure extends PurenessAnnotation
-
 /** The method is declared as impure. */
 class impure extends PurenessAnnotation
+
+/** 
+ * The method is impure if any of the type parameters specified is a type annotated with @sideEffect.
+ * Example:
+ * <code>
+ * 	trait Example[A] {
+ * 		@impureIf('B)
+ * 		def do[B](f: A => B): String = {...}
+ * 		@impureIf('A)
+ * 		def stuff(f: () => A): String = {...}
+ *  }
+ * </code> 
+ */
+class impureIf(params: Symbol*) extends PurenessAnnotation
 
 /**
  * Applicable on types that are used as return type to express the along with the type a side effect is caused
  * by the method (or the method depends on a side effect
  */
 class sideEffect extends StaticAnnotation with TypeConstraint
-
-/** Implementation detail, used by the compiler plugin to specify dependentPure further. */
-private[pusca] class purenessDependsOn(params: List[Symbol]) extends StaticAnnotation
