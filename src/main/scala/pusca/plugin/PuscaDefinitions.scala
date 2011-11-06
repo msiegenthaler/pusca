@@ -1,5 +1,7 @@
 package pusca.plugin
+
 import scala.tools.nsc.Global
+import scala.tools.nsc.symtab.Flags._
 
 trait PuscaDefinitions {
   val global: Global
@@ -11,6 +13,7 @@ trait PuscaDefinitions {
     val sideEffect = definitions.getClass("pusca.sideEffect")
     val pure = definitions.getClass("pusca.pure")
     val impure = definitions.getClass("pusca.impure")
+    val impureIf = definitions.getClass("pusca.impureIf")
     val declarePure = definitions.getClass("pusca.declarePure")
   }
 
@@ -62,6 +65,21 @@ trait PuscaDefinitions {
         Some(arg, true)
       case _ ⇒ None
     }
+  }
+
+  protected def applySideEffectFun = Select(Ident(puscaPackage.name.toTermName), "applySideEffect")
+  protected def applySideEffect(v: Tree) = {
+    val a = Apply(applySideEffectFun, v :: Nil)
+    a.symbol.setFlag(SYNTHETIC)
+    a.pos = v.pos
+    a
+  }
+  protected def addSideEffectFun = Select(Ident(puscaPackage.name.toTermName), "addSideEffect")
+  protected def addSideEffect(v: Tree) = {
+    val a = Apply(addSideEffectFun, v :: Nil)
+    a.symbol.setFlag(SYNTHETIC)
+    a.pos = v.pos
+    a
   }
 
   object PureDefDef {
