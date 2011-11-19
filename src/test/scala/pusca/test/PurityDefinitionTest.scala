@@ -13,9 +13,10 @@ class PurityDefinitionTest extends JUnitSuite with ShouldMatchersForJUnit {
   private def assertImpure(definition: String, call: String) = {
     val a = "@pure def checker = {" + call + "; () }"
     val b = "@impure def impureChecker = { " + call + "; () }"
+    val n = call.takeWhile(_ != '(')
     new PluginTester().fromString(definition).run should compile
     new PluginTester().fromString(definition).fromString(a).fromString(b).run should
-      yieldCompileError("impure method call inside the pure method 'checker'")
+      yieldCompileError("impure method call to " + n + " inside the pure method checker")
   }
 
   @Test def defPureFunctionImplicit {
@@ -95,7 +96,16 @@ class PurityDefinitionTest extends JUnitSuite with ShouldMatchersForJUnit {
         @impure def run = new X()""", "run")
   }
   @Test def impureClassConstructor2 {
-    assertImpure("""@impure class X { val a = 1 }""", "new X()")
+    code("""
+        @impure class X { val a = 1 }
+        @pure def checker = {
+        	new X()
+        	()
+    		}
+    		@impure def impureChecker = {
+        	new X()
+    			()
+    		}""") should yieldCompileError("impure method call to X.<init> inside the pure method checker")
   }
   @Test def impureClassConstructorWithArguments {
     assertImpure("""
@@ -106,7 +116,7 @@ class PurityDefinitionTest extends JUnitSuite with ShouldMatchersForJUnit {
 
   @Test def conflictingAnnotationsYieldError {
     code("@pure def a: Int @sideEffect = 10") should
-      yieldCompileError("method 'a' has @pure annotation and a @sideEffect return type")
+      yieldCompileError("method a has @pure annotation and a @sideEffect return type")
   }
 
   @Test def impureImpliesSideEffectReturnType {
@@ -115,6 +125,6 @@ class PurityDefinitionTest extends JUnitSuite with ShouldMatchersForJUnit {
     code("""
         @impure def a: Int = 10
         def b = a
-        @pure def c = b""") should yieldCompileError("impure method call inside the pure method 'c'")
+        @pure def c = b""") should yieldCompileError("impure method call to b inside the pure method c")
   }
 }

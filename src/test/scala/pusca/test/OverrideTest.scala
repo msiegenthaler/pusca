@@ -53,7 +53,7 @@ class OverrideTest extends JUnitSuite with ShouldMatchersForJUnit {
         		val v = super.a 
         		v + "!"
     			}
-        }""") should yieldCompileError("impure method call inside the pure method 'C.a'")
+        }""") should yieldCompileError("impure method call to a inside the pure method C.a")
   }
   
   @Test def pureMayOverrideImpureButNotCallSuperEnd {
@@ -62,7 +62,7 @@ class OverrideTest extends JUnitSuite with ShouldMatchersForJUnit {
     		class B extends A { @impure override def a() = "Hi" }
     		class C extends B {
         	@pure override def a() = super.a() + "!" 
-        }""") should yieldCompileError("impure method call inside the pure method 'C.a'")
+        }""") should yieldCompileError("impure method call to a inside the pure method C.a")
   }
 
   @Test def pureMayOverrideImpureButNotCallSuperEnd2 {
@@ -71,7 +71,7 @@ class OverrideTest extends JUnitSuite with ShouldMatchersForJUnit {
     		class B extends A { @impure override def a = "Hi" }
     		class C extends B {
         	@pure override def a = super.a + "!" 
-        }""") should yieldCompileError("impure method call inside the pure method 'C.a'")
+        }""") should yieldCompileError("impure method call to a inside the pure method C.a")
   }
 
   @Test def impureMayNotOverridePureSideEFfect {

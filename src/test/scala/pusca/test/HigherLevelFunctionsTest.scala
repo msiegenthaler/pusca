@@ -80,7 +80,7 @@ class HigherLevelFunctionsTest extends JUnitSuite with ShouldMatchersForJUnit {
   @Test def functionWithSideEffectCannotBeEvaluatedInsidePureFunctionLast {
     code("""
         @pure def m(f: String => Unit @sideEffect): Unit = f("Hi")
-      """) should yieldCompileError("impure method call inside the pure method 'm'")
+      """) should yieldCompileError("impure method call to apply inside the pure method m")
   }
 
   @Test def functionWithSideEffectCannotBeEvaluatedInsidePureFunctionMiddle {
@@ -89,7 +89,7 @@ class HigherLevelFunctionsTest extends JUnitSuite with ShouldMatchersForJUnit {
         	f("Hi")
         	()
     		}
-      """) should yieldCompileError("impure method call inside the pure method 'm'")
+      """) should yieldCompileError("impure method call to apply inside the pure method m")
   }
 
   @Test def functionWithSideEffectCanBePassedToPureFunction {
@@ -145,7 +145,7 @@ class HigherLevelFunctionsTest extends JUnitSuite with ShouldMatchersForJUnit {
 				@impure def il(i: Int): Int @sideEffect = i + i
 				class LengthFunI extends Function1[String,Int @sideEffect] { override def apply(s: String) = il(s.length) }
 				@pure def x = m[Int @sideEffect](new LengthFunI)
-		""") should yieldCompileError("impure method call inside the pure method 'x'")
+		""") should yieldCompileError("impure method call to m inside the pure method x")
 	}
   @Test def functionWithTypeParameterIncludesPurenessOnImpureWithClass2 {
     code("""
@@ -153,7 +153,7 @@ class HigherLevelFunctionsTest extends JUnitSuite with ShouldMatchersForJUnit {
         @impure def il(i: Int) = i + i
   	    class LengthFunI extends Function1[String,Int @sideEffect] { override def apply(s: String) = il(s.length) }
   			@pure def x = m[Int @sideEffect](new LengthFunI)
-  		""") should yieldCompileError("impure method call inside the pure method 'x'")
+  		""") should yieldCompileError("impure method call to m inside the pure method x")
   }
   @Test def functionWithTypeParameterIncludesPurenessOnImpureWithClass3 {
     code("""
@@ -205,7 +205,7 @@ class HigherLevelFunctionsTest extends JUnitSuite with ShouldMatchersForJUnit {
   			def m[A](f: String => A): A = f("Hello")
   			@impure def il(i: String) = i.length
   			@pure def x = m[Int @sideEffect](il _)
-  		""") should yieldCompileError("impure method call inside the pure method 'x'")
+  		""") should yieldCompileError("impure method call to m inside the pure method x")
   }
   @Test def functionWithTypeParameterIncludesPurenessOnImpureWithAnonMiddleExplicit {
     code("""
@@ -215,7 +215,7 @@ class HigherLevelFunctionsTest extends JUnitSuite with ShouldMatchersForJUnit {
         	m[Int @sideEffect](il _)
         	10
     		}
-  		""") should yieldCompileError("impure method call inside the pure method 'x'")
+  		""") should yieldCompileError("impure method call to m inside the pure method x")
   }
 
   @Test def functionWithTypeParameterIncludesPurenessOnImpureWithAnonAndUnitExplicit {
@@ -223,7 +223,7 @@ class HigherLevelFunctionsTest extends JUnitSuite with ShouldMatchersForJUnit {
   			def m[A](f: String => A): A = f("Hello")
   			@impure def il(i: String) = ()
   			@pure def x = m[Unit @sideEffect](il _)
-  		""") should yieldCompileError("impure method call inside the pure method 'x'")
+  		""") should yieldCompileError("impure method call to m inside the pure method x")
   }
   @Test def functionWithTypeParameterIncludesPurenessOnImpureWithAnonAndUnitMiddleExplicit {
     code("""
@@ -233,7 +233,7 @@ class HigherLevelFunctionsTest extends JUnitSuite with ShouldMatchersForJUnit {
   				m[Unit @sideEffect](il _)
   				10
   			}
-  		""") should yieldCompileError("impure method call inside the pure method 'x'")
+  		""") should yieldCompileError("impure method call to m inside the pure method x")
   }
 
   @Test def functionWithTypeParameterIncludesPurenessOnImpureWithWrongType {
@@ -252,7 +252,7 @@ class HigherLevelFunctionsTest extends JUnitSuite with ShouldMatchersForJUnit {
   			def m[A](f: String => A): A = f("Hello")
   			@impure def il(i: String) = i.length
   			@pure def x = m[Int @sideEffect](s => il(s))
-  		""") should yieldCompileError("impure method call inside the pure method 'x'")
+  		""") should yieldCompileError("impure method call to m inside the pure method x")
   }
 
   @Test def pureFunctionWithParameterThatIsNotAReturnValueAcceptsPure {
