@@ -37,6 +37,8 @@ trait PuscaDefinitions {
   protected lazy val markReturnValueMethod = definitions.getMember(puscaPackage, "__internal__markReturnValue")
   protected lazy val markReturnValueWithSideEffectMethod = definitions.getMember(puscaPackage, "__internal__markReturnValueWithSideEffect")
 
+  def hasSideEffect(t: Type) = hasAnnotation(t, Annotation.sideEffect)
+  
   object ApplySideEffect {
     def unapply(t: Tree) = t match {
       case Apply(TypeApply(Select(Select(Ident(p), pko), mn), _), arg :: Nil) if p == puscaPackage.name && pko == packageObject && mn == applySideEffectMethod.name ⇒

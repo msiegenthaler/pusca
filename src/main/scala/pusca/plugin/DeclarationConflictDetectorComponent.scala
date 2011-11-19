@@ -18,6 +18,7 @@ class DeclarationConflictDetectorComponent(val global: Global) extends PluginCom
     private def isAnnotPure(s: DefDef) = hasAnnotation(s.symbol, Annotation.pure)
     override def name = phaseName
 
+    //TODO handle impureIf
     override def apply(unit: CompilationUnit) {
       def handle(t: Tree): Unit = {
         t match {

@@ -11,7 +11,6 @@ abstract class SideEffectChecker extends PuscaDefinitions {
   object RemoveUnnecessaryApplySideEffect extends RemoveUnnecessaryApplySideEffectBase
 
   object checker extends AnnotationChecker {
-    private def hasSideEffect(tpe: Type) = hasAnnotation(tpe, Annotation.sideEffect)
     private def withSideEffect(tpe: Type) = annotateWith(tpe, Annotation.sideEffect)
 
     def annotationsConform(tpe1: Type, tpe2: Type): Boolean = {
@@ -26,7 +25,7 @@ abstract class SideEffectChecker extends PuscaDefinitions {
 
     override def annotationsLub(tp: Type, ts: List[Type]): Type = {
       //println("# Lub tp=" + tp + "    ts=" + ts)
-      if (ts.find(hasAnnotation(_, Annotation.sideEffect)).isDefined && !hasAnnotation(tp, Annotation.sideEffect))
+      if (ts.find(hasSideEffect).isDefined && !hasSideEffect(tp))
         annotateWith(tp, Annotation.sideEffect)
       else tp
     }
@@ -39,12 +38,12 @@ abstract class SideEffectChecker extends PuscaDefinitions {
           tpe match {
             case r: TypeRef ⇒
               val (h, t :: Nil) = r.args.splitAt(r.args.size - 1)
-              if (!hasAnnotation(t, Annotation.sideEffect)) {
+              if (!hasSideEffect(t)) {
                 val nt = annotateWith(t, Annotation.sideEffect)
                 val res = TypeRef(r.pre, r.sym, h ::: nt :: Nil)
                 res
               } else tpe
-            case other if (!hasAnnotation(other, Annotation.sideEffect)) ⇒
+            case other if (!hasSideEffect(other)) ⇒
               annotateWith(tpe, Annotation.sideEffect)
             case _ ⇒ tpe
           }
@@ -56,12 +55,12 @@ abstract class SideEffectChecker extends PuscaDefinitions {
       //println("# canAdapt  tree=" + tree + "  mode=" + analyzer.modeString(mode) + "  pt=" + pt + "  class=" + tree.getClass)
       if ((mode & analyzer.EXPRmode) == 0 || (mode & analyzer.LHSmode) != 0) false
       else tree match {
-        case a @ ApplySideEffect(_) ⇒ false
-        case a @ MarkReturnValue(_, _) ⇒ true
-        case a: Apply if hasAnnotation(a.tpe, Annotation.sideEffect) ⇒ true
-        case i: Ident if hasAnnotation(i.tpe, Annotation.sideEffect) ⇒ true
-        case s: Select if hasAnnotation(s.tpe, Annotation.sideEffect) ⇒ true
-        case _ ⇒ false
+        case a @ ApplySideEffect(_)            ⇒ false
+        case a @ MarkReturnValue(_, _)         ⇒ true
+        case a: Apply if hasSideEffect(a.tpe)  ⇒ true
+        case i: Ident if hasSideEffect(i.tpe)  ⇒ true
+        case s: Select if hasSideEffect(s.tpe) ⇒ true
+        case _                                 ⇒ false
       }
     }
 
@@ -85,7 +84,7 @@ abstract class SideEffectChecker extends PuscaDefinitions {
         // get rid of all markReturnValue calls
         case MarkReturnValue(ApplySideEffect(a), _) ⇒ //remove applySideEffect on the method's return path
           a
-        case MarkReturnValue(a, true) if !hasAnnotation(a.tpe, Annotation.sideEffect) ⇒ //addSideEffect on return path
+        case MarkReturnValue(a, true) if !hasSideEffect(a.tpe) ⇒ //addSideEffect on return path
           typed(addSideEffect(a))
         case MarkReturnValue(a, _) ⇒
           a

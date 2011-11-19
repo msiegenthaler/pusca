@@ -5,7 +5,7 @@ import scala.tools.nsc.Global
 import scala.tools.nsc.Phase
 
 /**
- * Warns on unnecessary @delcarePure annotations. The annotation is not necessary if the method is pure anyway.
+ * Warns on unnecessary @declarePure annotations. The annotation is not necessary if the method is pure anyway.
  */
 class UnnecessaryDeclarePureComponent(val global: Global) extends PluginComponent with PuscaDefinitions {
   import global._

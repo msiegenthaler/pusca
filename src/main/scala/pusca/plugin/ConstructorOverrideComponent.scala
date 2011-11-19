@@ -20,6 +20,7 @@ class ConstructorOverrideComponent(val global: Global) extends PluginComponent w
     override def apply(unit: CompilationUnit) {
       def handle(t: Tree): Unit = {
         t match {
+          //TODO handle @impureIf correctly
           case c @ ClassDef(_, name, _, Template(parents, _, _)) if !hasAnnotation(c.symbol, Annotation.impure) ⇒
             val ip = parents.filter(p ⇒ hasAnnotation(p.symbol, Annotation.impure))
             if (!ip.isEmpty) reporter.error(c.pos, "The pure class '" + name + "' has impure parent: '" + ip.mkString(" with ") + "'")

@@ -17,7 +17,8 @@ class ForbiddenSideEffectAssignmentComponent(val global: Global) extends PluginC
     override def apply(unit: CompilationUnit) {
       def handle(t: Tree): Unit = {
         t match {
-          case v: ValDef if hasAnnotation(v.tpt.tpe, Annotation.sideEffect) && !v.symbol.isSynthetic ⇒
+          
+          case v: ValDef if hasSideEffect(v.tpt.tpe) && !v.symbol.isSynthetic ⇒
             reporter.error(v.pos, "declaration of " + (if (v.symbol.isVariable) "var" else "val") +" with @sideEffect is not allowed")
           case _ ⇒ ()
         }
