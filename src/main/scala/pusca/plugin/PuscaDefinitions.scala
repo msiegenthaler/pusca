@@ -90,7 +90,10 @@ trait PuscaDefinitions {
     case object AlwaysImpure extends Purity
     case class ImpureDependingOn(tparams: Set[String]) extends Purity
 
-    /** Determines the declared purity of a method. Does not take the body of the method into account, whether the body conforms to the declaration is checked elsewhere. */
+    /**
+     * Determines the declared purity of a method/class/function.
+     * Does not take the body of the method into account, whether the body conforms to the declaration is checked elsewhere.
+     */
     def purityOf(s: Symbol): Purity = s match {
       case s if s.isSetter                          ⇒ AlwaysImpure //setter of var
       case s if s.isGetter && !s.isStable           ⇒ AlwaysImpure //getter on var
@@ -102,9 +105,11 @@ trait PuscaDefinitions {
           case None                             ⇒ Nil
         }
         ImpureDependingOn(impureIfs.toSet)
+      case s if s.isConstructor ⇒ purityOf(s.owner)
       case s: MethodSymbol ⇒ //impureIfImpureResult
         val rt = resultType(s)
-        if (rt.typeSymbol.isTypeParameterOrSkolem) ImpureDependingOn(Set(rt.typeSymbol.name.toString))
+        if (hasSideEffect(rt)) AlwaysImpure
+        else if (rt.typeSymbol.isTypeParameterOrSkolem) ImpureDependingOn(Set(rt.typeSymbol.name.toString))
         else AlwaysPure
       case _ ⇒ AlwaysPure
     }
@@ -190,10 +195,16 @@ trait PuscaDefinitions {
     }
 
     private[this] def handle(obj: Symbol, objName: String, allowedImpures: Set[String])(t: Tree, soFar: List[Error] = Nil): List[Error] = t match {
+      case ApplySideEffect(a) ⇒
+        handle(obj, objName, allowedImpures)(a, soFar)
       case a: Apply if violatesPurity(a, allowedImpures) ⇒
-        if (a.fun.symbol.isSetter) Error(a.pos, "write to non-local var " + a.fun.symbol.name.toString.dropRight(4) + " inside the pure " + objName) :: soFar
-        else if (a.fun.symbol.isGetter) Error(a.pos, "access to non-local var " + a.fun.symbol.name + " inside the pure " + objName) :: soFar
-        else Error(a.pos, "impure method call to " + a.fun.symbol.name + " inside the pure " + objName) :: soFar
+        val msg = a.fun.symbol match {
+          case s if s.isSetter      ⇒ "write to non-local var " + s.name.toString.dropRight(4) + " inside the pure " + objName
+          case s if s.isGetter      ⇒ "access to non-local var " + s.name + " inside the pure " + objName
+          case s if s.isConstructor ⇒ "impure method call to " + a.fun.symbol.owner.name + ".<init> inside the pure " + objName
+          case s                    ⇒ "impure method call to " + a.fun.symbol.name + " inside the pure " + objName
+        }
+        Error(a.pos, msg) :: soFar
 
       case a @ Assign(lhs, rhs) if (!lhs.symbol.ownerChain.contains(obj)) ⇒ // assign to var outside the scope of this method
         Error(a.pos, "write to non-local var " + lhs.symbol.name + " inside the pure " + objName) :: soFar
