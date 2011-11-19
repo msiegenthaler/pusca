@@ -81,9 +81,6 @@ class ParametrizedTypesApplicatorComponent(val global: Global) extends PluginCom
    * it returns: A -> Int, B -> String
    */
   def resolveTypeParams(a: Apply): Map[String, Type] = {
-    val o = a.fun.symbol.owner
-    println("owner of " + a.fun + " = " + o)
-    println("ot = " + o.typeParams)
     def methodOwnerTypeParams(a: Tree): Map[String, Type] = a match {
       case Select(o, _) ⇒
         o.tpe.underlying match {
@@ -93,9 +90,7 @@ class ParametrizedTypesApplicatorComponent(val global: Global) extends PluginCom
         }
       case _ ⇒ Map()
     }
-
     a.fun match {
-      //TODO also resolve from outer classes/defs of fun
       case TypeApply(fun, targs) ⇒
         val pl = fun.symbol.typeParams.map(_.name.toString).toList
         methodOwnerTypeParams(fun) ++ pl.zip(targs.map(_.tpe)).toMap
@@ -130,13 +125,7 @@ class ParametrizedTypesApplicatorComponent(val global: Global) extends PluginCom
             val appl = new Applicator(unit, d.symbol, impures)
             treeCopy.DefDef(d, mods, name, tparams, vparamss, tpt, appl.transform(d.rhs))
         }
-      //        val impureIf = d.symbol.annotations.find(_.atp.typeSymbol == Annotation.impureIf) match {
-      //          case Some(AnnotationInfo(_, args, _)) ⇒ args.collect { case SymbolApply(arg) ⇒ arg }
-      //          case None                             ⇒ Nil
-      //        }
-      //println("found defdef " + d.name + "  with impureIfs: " + impureIf) //TODO
-      //        val appl = new Applicator(unit, d.symbol, impureIf.map(_.toString).toSet)
-      //        treeCopy.DefDef(d, mods, name, tparams, vparamss, tpt, appl.transform(d.rhs))
+
       //TODO ClassDef
       //TODO Function (or shift after uncurry?)
 
@@ -145,41 +134,10 @@ class ParametrizedTypesApplicatorComponent(val global: Global) extends PluginCom
 
     private class Applicator(unit: CompilationUnit, method: Symbol, impures: Set[String]) extends TypingTransformer(unit) {
       override def transform(tree: Tree): Tree = tree match {
-        //        case a @ ApplySideEffect(_) ⇒ a
-        //        case a @ AddSideEffect(_)   ⇒ a
-
-        //        case a: Apply ⇒ a match {
-        //          //          case WithTypeVar(v) ⇒
-        //          //            println("found var: " + v)
-        //          //            if (impures.contains(v)) {
-        //          //              println("is allowed to be impure")
-        //          //              super.transform(a)
-        //          //            } else {
-        //          //              localTyper.typed(applySideEffect(a))
-        //          //            }
-        //          case x if x.fun.toString.contains("exec") ⇒
-        //            val tpe = x.fun.tpe
-        //            val fs = x.fun.symbol
-        //            println("@fs   " + fs)
-        //            println("@tpe  " + tpe)
-        //
-        //            val r = methodPurity(fs)
-        //            println("@r    " + r)
-        //
-        //            println("@tparams " + a.fun.symbol.typeParams)
-        //            val xs = x.symbol
-        //            val xst = xs.typeParams
-        //            println("@xs " + xs)
-        //            println("@xst " + xst)
-        //
-        //            val rtp = resolveTypeParams(x)
-        //            println("@ rtp = " + rtp)
-        //
-        //            println("@ impures for  " + x + " = " + impures)
-        //            println("@ is pure apply: " + isPureApply(x, impures))
-        //            
+        case a @ ApplySideEffect(_) ⇒ a
+        case a @ AddSideEffect(_)   ⇒ a
         case a: Apply if violatesPurity(a, impures) ⇒
-          reporter.error(a.pos, "impure method call inside the pure method '" + method.fullName + "'") //TODO
+          reporter.error(a.pos, "impure method call inside the pure method '" + method.fullName + "'")
           super.transform(a)
 
         case d: DefDef   ⇒ Looker.this.transform(d)
