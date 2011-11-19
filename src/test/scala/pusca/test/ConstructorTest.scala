@@ -37,40 +37,37 @@ class ConstructorTest extends JUnitSuite with ShouldMatchersForJUnit {
         	new A
         	()
     		}""") should
-      yieldCompileError("impure method call inside the pure method 'makeA'")
+      yieldCompileError("impure method call to A.<init> inside the pure method makeA")
   }
-  
   @Test def pureFunctionCannotCallImpureConstuctor2 {
-  	code("""
+    code("""
   			@impure class A { var x = "Hi" }
   			@pure def makeA = new A
-  		""") should
-  	yieldCompileError("impure method call inside the pure method 'makeA'")
+  		""") should yieldCompileError("impure method call to A.<init> inside the pure method makeA")
   }
-  
+
   @Test def callingImpureNewLastMakesAMethodImpure {
-  	code("""
+    code("""
   			@impure class A { var x = "Hi" }
   			def makeA = new A
   	    @pure def run = makeA
-  		""") should
-  	yieldCompileError("impure method call inside the pure method 'run'")
+  		""") should yieldCompileError("impure method call to makeA inside the pure method run")
   }
 
   @Test def constructorNotDeclaredImpureMayNotUseVars {
     code("""trait X {
         			var a = 10
         			trait A { val b = a }
-    				}""") should yieldCompileError("access to non-local var inside the pure class 'X.A'")
+    				}""") should yieldCompileError("access to non-local var a inside the pure class X.A")
   }
 
   @Test def constructorNotDeclaredImpureMayNotCallImpureFunction {
     code("""
         @impure def ip(s: String) = ()
  				trait A { ip("Hi") }
-        """) should yieldCompileError("impure method call inside the pure class 'A'")
+        """) should yieldCompileError("impure method call to ip inside the pure class A")
   }
-  
+
   @Test def impureConstructorMayCallImpureMethods {
     code("""
         @impure def ip(s: String) = ()
