@@ -257,7 +257,7 @@ class HigherLevelFunctionsTest extends JUnitSuite with ShouldMatchersForJUnit {
 
   @Test def pureFunctionWithParameterThatIsNotAReturnValueAcceptsPure {
     code("""
-        @pure def m[A](f: String => A): Unit = {
+        @impureIf('A) def m[A](f: String => A): Unit = {
         	f("Huhu")
         	()
     		}
@@ -267,13 +267,13 @@ class HigherLevelFunctionsTest extends JUnitSuite with ShouldMatchersForJUnit {
 
   @Test def pureFunctionWithParameterDeclaredSideEffectAcceptsPure {
     code("""
-        @pure def m[A](f: String => A): Unit = ()
+        @impureIf('A) def m[A](f: String => A): Unit = ()
         @pure def x = m(_.length)
       """) should compile
   }
   @Test def pureFunctionWithParameterDeclaredSideEffectCannotEvaluateIt {
     code("""
-        @pure def m[A](f: String => A): Unit = f("hi")
+        @impureIf('A) def m[A](f: String => A): Unit = f("hi")
       """) should compile
   }
 
