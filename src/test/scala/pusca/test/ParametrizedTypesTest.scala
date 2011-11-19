@@ -25,7 +25,7 @@ class ParametrizedTypesTest extends JUnitSuite with ShouldMatchersForJUnit {
         	"Hi"
     		}
         @pure def p = exec[Int @sideEffect] { () => 10 }
-        """) should yieldCompileError("impure method call inside the pure method 'p'")
+        """) should yieldCompileError("impure method call to exec inside the pure method p")
   }
 
   @Test def methodWithOneParameterNoDeclaration {
@@ -34,7 +34,7 @@ class ParametrizedTypesTest extends JUnitSuite with ShouldMatchersForJUnit {
         	f()
         	"Hi"
     		}
-        """) should yieldCompileError("impure method call inside the pure method 'exec'")
+        """) should yieldCompileError("impure method call to apply inside the pure method exec")
   }
 
   @Test def methodWithOneParameterRvPure {
@@ -54,7 +54,7 @@ class ParametrizedTypesTest extends JUnitSuite with ShouldMatchersForJUnit {
         	val f: String => Int @sideEffect = s => s.length
         	x[Int @sideEffect](f)
     		}
-        """) should yieldCompileError("impure method call inside the pure method 'p'")
+        """) should yieldCompileError("impure method call to x inside the pure method p")
   }
 
   @Test def boxForFunctionPure {
@@ -73,7 +73,7 @@ class ParametrizedTypesTest extends JUnitSuite with ShouldMatchersForJUnit {
     		}
        	val box = FBox[String,Int @sideEffect](_.length)
         @pure def p = box("Hi")
-        """) should yieldCompileError("impure method call inside the pure method 'p'")
+        """) should yieldCompileError("impure method call to apply inside the pure method p")
   }
 
   @Test def boxWithPreFunPure {
@@ -98,7 +98,7 @@ class ParametrizedTypesTest extends JUnitSuite with ShouldMatchersForJUnit {
     		}
         val box = PFB[String,Int @sideEffect,Unit](_.length, () => ())
         @pure def p = box("Hi")
-        """) should yieldCompileError("impure method call inside the pure method 'p'")
+        """) should yieldCompileError("impure method call to apply inside the pure method p")
   }
   @Test def boxWithPreFunImpurePreFun {
     code("""
@@ -110,7 +110,7 @@ class ParametrizedTypesTest extends JUnitSuite with ShouldMatchersForJUnit {
     		}
         val box = PFB[String,Int,Unit @sideEffect](_.length, () => ())
         @pure def p = box("Hi")
-        """) should yieldCompileError("impure method call inside the pure method 'p'")
+        """) should yieldCompileError("impure method call to apply inside the pure method p")
   }
   @Test def boxWithPreFunUndeclaredDependencyOnPurenessOfB {
     code("""
@@ -120,6 +120,6 @@ class ParametrizedTypesTest extends JUnitSuite with ShouldMatchersForJUnit {
         		f(a)
     			}
     		}
-        """) should yieldCompileError("impure method call inside the pure method 'PFB.apply'")
+        """) should yieldCompileError("impure method call to apply inside the pure method PFB.apply")
   }
 }
