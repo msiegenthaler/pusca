@@ -11,7 +11,7 @@ import scala.tools.nsc.symtab.Flags
 class ConstructorOverrideComponent(val global: Global) extends PluginComponent with PuscaDefinitions {
   import global._
 
-  override val runsAfter = List("typer", "removeUnnecessaryApplySideEffect", "forbiddenSideEffectAssignment", "purityDeclarationConflictDetector", "uncurry")
+  override val runsAfter = List("typer", "forbiddenSideEffectAssignment", "purityDeclarationConflictDetector", "uncurry")
   val phaseName = "constructorOverride"
   def newPhase(prev: Phase) = new ConstructorOverride(prev)
 
