@@ -96,12 +96,11 @@ class PurityCheckerComponent(val global: Global) extends PluginComponent with Pu
       case AlwaysImpure ⇒ true
       case ImpureDependingOn(di) ⇒
         def mayHaveSideEffect(tpe: Type) = hasSideEffect(tpe) || tpe.typeSymbol.isTypeParameterOrSkolem
-        def isAllowedImpure(tpe: Type) = tpe.typeSymbol.isTypeParameterOrSkolem || allowedImpures.contains(tpe.typeSymbol.name.toString)
+        def isAllowedImpure(tpe: Type) = tpe.typeSymbol.isTypeParameterOrSkolem && allowedImpures.contains(tpe.typeSymbol.name.toString)
 
         val tparams = resolveTypeParams(a).filter(e ⇒ di.contains(e._1))
         di.filterNot(tparams.contains).foreach { p ⇒ reporter.error(a.pos, "unresolved type parameter " + p + " on call to " + a.fun.symbol.fullName) }
         val ips = tparams.filter(e ⇒ mayHaveSideEffect(e._2) && !isAllowedImpure(e._2))
-        ips.foreach(i ⇒ println("@@  unallowed impure: " + i)) //TODO
         ips.nonEmpty
     }
 
