@@ -17,15 +17,17 @@ class ParametrizedTypesTest extends JUnitSuite with ShouldMatchersForJUnit {
         @pure def p = exec[Int] { () => 10 } 
         """) should compile
   }
+
   @Test def methodWithOneParameterImpure {
     code("""
         @impureIf('A) def exec[A](f: () => A): String = {
         	f()
         	"Hi"
     		}
-        @pure def p = exec[Int @sideEffect] { () => 10 } 
+        @pure def p = exec[Int @sideEffect] { () => 10 }
         """) should yieldCompileError("impure method call inside the pure method 'p'")
   }
+
   @Test def methodWithOneParameterNoDeclaration {
     code("""
         def exec[A](f: () => A): String = {
@@ -44,7 +46,7 @@ class ParametrizedTypesTest extends JUnitSuite with ShouldMatchersForJUnit {
     		}
         """) should compile
   }
-  
+
   @Test def methodWithOneParameterRvImpure {
     code("""
     		@impureIf('A) def x[A](f: String => A) = f("Hi")
@@ -54,7 +56,7 @@ class ParametrizedTypesTest extends JUnitSuite with ShouldMatchersForJUnit {
     		}
         """) should yieldCompileError("impure method call inside the pure method 'p'")
   }
-  
+
   @Test def boxForFunctionPure {
     code("""
         case class FBox[A,B](f: A => B) {
@@ -73,7 +75,7 @@ class ParametrizedTypesTest extends JUnitSuite with ShouldMatchersForJUnit {
         @pure def p = box("Hi")
         """) should yieldCompileError("impure method call inside the pure method 'p'")
   }
-  
+
   @Test def boxWithPreFunPure {
     code("""
         case class PFB[A,B,C](f: A => B, pf: () => C) {
