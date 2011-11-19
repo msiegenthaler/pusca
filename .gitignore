@@ -3,3 +3,5 @@ bin
 .scala_dependencies
 .target
 .cache
+.idea
+.idea_modules
