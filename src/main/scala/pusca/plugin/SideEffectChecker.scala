@@ -75,6 +75,12 @@ abstract class SideEffectChecker extends PuscaDefinitions {
           recursive.set(false)
         }
     }
+    private object SuperConstructor {
+      def unapply(t: Tree) = t match {
+        case a @ Apply(f @ Select(Super(This(_), _), n), _) if n == stringToTermName("<init>") ⇒ Some(a)
+        case _ ⇒ None
+      }
+    }
     override def adaptAnnotations(tree: Tree, mode: Int, pt: Type): Tree = {
       lazy val localTyper = analyzer.newTyper(analyzer.rootContext(currentRun.currentUnit, tree, false))
       def typed(a: Tree) = dontRecurse(tree)(localTyper.typed(a))
@@ -89,7 +95,7 @@ abstract class SideEffectChecker extends PuscaDefinitions {
         case MarkReturnValue(a, _) ⇒
           a
 
-        case a @ Apply(f @ Select(Super(This(_), _), n), _) if n == stringToTermName("<init>") ⇒
+        case SuperConstructor(a) ⇒
           a
 
         case a @ AddSideEffect(_) ⇒
