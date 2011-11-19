@@ -8,8 +8,6 @@ abstract class SideEffectChecker extends PuscaDefinitions {
   val global: Global
   import global._
 
-  object RemoveUnnecessaryApplySideEffect extends RemoveUnnecessaryApplySideEffectBase
-
   object checker extends AnnotationChecker {
     private def withSideEffect(tpe: Type) = annotateWith(tpe, Annotation.sideEffect)
 
@@ -33,7 +31,7 @@ abstract class SideEffectChecker extends PuscaDefinitions {
     override def addAnnotations(tree: Tree, tpe: Type): Type = {
       //println("# addAnnotations type of tree=" + tree.getClass + "   tpe=" + tpe + "\n       tree=" + tree)
       tree match {
-        case f @ Function(vparams, body) if PurityChecker(f.symbol, "", RemoveUnnecessaryApplySideEffect.transform(body)).nonEmpty ⇒
+        case f @ Function(vparams, body) if PurityChecker(f).nonEmpty ⇒
           //impure function, so annotate the return type
           tpe match {
             case r: TypeRef ⇒

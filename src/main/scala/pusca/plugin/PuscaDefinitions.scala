@@ -144,36 +144,42 @@ trait PuscaDefinitions {
      *  </code>
      * it returns: A -> Int, B -> String
      */
-    def resolveTypeParams(a: Apply): Map[String, Type] = {
-      def methodOwnerTypeParams(a: Tree): Map[String, Type] = a match {
-        case Select(o, _) ⇒
-          o.tpe.underlying match {
-            case TypeRef(p, s, a) ⇒
-              s.typeParams.map(_.name.toString).zip(a).toMap
-            case _ ⇒ Map()
-          }
-        case _ ⇒ Map()
-      }
-      a.fun match {
-        case TypeApply(fun, targs) ⇒
-          val pl = fun.symbol.typeParams.map(_.name.toString).toList
-          methodOwnerTypeParams(fun) ++ pl.zip(targs.map(_.tpe)).toMap
-        case f ⇒ methodOwnerTypeParams(f)
-      }
+    def resolveTypeParams(a: Apply): Map[String, Type] = a.fun match {
+      case TypeApply(fun, targs) ⇒
+        val pl = fun.symbol.typeParams.map(_.name.toString).toList
+        methodOwnerTypeParams(fun) ++ pl.zip(targs.map(_.tpe)).toMap
+      case f ⇒ methodOwnerTypeParams(f)
+    }
+    def methodOwnerTypeParams(a: Tree): Map[String, Type] = a match {
+      case Select(o, _) ⇒
+        o.tpe.underlying match {
+          case TypeRef(p, s, a) ⇒
+            s.typeParams.map(_.name.toString).zip(a).toMap
+          case _ ⇒ Map()
+        }
+      case _ ⇒ Map()
     }
 
     /** checks whether an apply is pure given the list of with names of type parameters that are allowed to be impure. */
-    def violatesPurity(a: Apply, allowedImpures: Set[String] = Set()): Boolean = purityOf(a.fun.symbol) match {
-      case AlwaysPure   ⇒ false
-      case AlwaysImpure ⇒ true
-      case ImpureDependingOn(di) ⇒
-        def mayHaveSideEffect(tpe: Type) = hasSideEffect(tpe) || tpe.typeSymbol.isTypeParameterOrSkolem
-        def isAllowedImpure(tpe: Type) = tpe.typeSymbol.isTypeParameterOrSkolem && allowedImpures.contains(tpe.typeSymbol.name.toString)
+    def violatesPurity(a: Apply, allowedImpures: Set[String]): Boolean = purityOf(a.fun.symbol) match {
+      case AlwaysPure            ⇒ false
+      case AlwaysImpure          ⇒ true
+      case ImpureDependingOn(di) ⇒ violates(di, allowedImpures, resolveTypeParams(a), a.pos, a.fun.symbol)
+    }
+    def violatesPurity(s: Select, allowedImpures: Set[String]): Boolean = purityOf(s.symbol) match {
+      case AlwaysPure            ⇒ false
+      case AlwaysImpure          ⇒ true
+      case ImpureDependingOn(di) ⇒ violates(di, allowedImpures, methodOwnerTypeParams(s), s.pos, s.symbol)
+    }
+    private def violates(di: Set[String], allowedImpures: Set[String], tp: Map[String, Type], pos: Position, f: Symbol): Boolean = {
+      def mayHaveSideEffect(tpe: Type) = hasSideEffect(tpe) || tpe.typeSymbol.isTypeParameterOrSkolem
+      def isAllowedImpure(tpe: Type) = tpe.typeSymbol.isTypeParameterOrSkolem && allowedImpures.contains(tpe.typeSymbol.name.toString)
 
-        val tparams = resolveTypeParams(a).filter(e ⇒ di.contains(e._1))
-        di.filterNot(tparams.contains).foreach { p ⇒ reporter.error(a.pos, "unresolved type parameter " + p + " on call to " + a.fun.symbol.fullName) }
-        val ips = tparams.filter(e ⇒ mayHaveSideEffect(e._2) && !isAllowedImpure(e._2))
-        ips.nonEmpty
+      val tparams = tp.filter(e ⇒ di.contains(e._1))
+      di.filterNot(tparams.contains).foreach { p ⇒ reporter.error(pos, "unresolved type parameter " + p + " on call to " + f.fullName) }
+      val ips = tparams.filter(e ⇒ mayHaveSideEffect(e._2) && !isAllowedImpure(e._2))
+      ips.nonEmpty
+
     }
   }
 
@@ -201,22 +207,37 @@ trait PuscaDefinitions {
         val msg = a.fun.symbol match {
           case s if s.isSetter      ⇒ "write to non-local var " + s.name.toString.dropRight(4) + " inside the pure " + objName
           case s if s.isGetter      ⇒ "access to non-local var " + s.name + " inside the pure " + objName
-          case s if s.isConstructor ⇒ "impure method call to " + a.fun.symbol.owner.name + ".<init> inside the pure " + objName
-          case s                    ⇒ "impure method call to " + a.fun.symbol.name + " inside the pure " + objName
+          case s if s.isConstructor ⇒ "impure method call to " + s.owner.name + ".<init> inside the pure " + objName
+          case s                    ⇒ "impure method call to " + s.name + " inside the pure " + objName
         }
         Error(a.pos, msg) :: soFar
+      case a @ Apply(Select(o, _), args) =>
+        (o :: args).foldLeft(soFar)((sf, e) ⇒ handle(obj, objName, allowedImpures)(e, sf))
+      case a @ Apply(TypeApply(Select(o, _), _), args) =>
+        (o :: args).foldLeft(soFar)((sf, e) ⇒ handle(obj, objName, allowedImpures)(e, sf))
+      case a: Apply ⇒
+        a.children.foldLeft(soFar)((sf, e) ⇒ handle(obj, objName, allowedImpures)(e, sf))
 
       case a @ Assign(lhs, rhs) if (!lhs.symbol.ownerChain.contains(obj)) ⇒ // assign to var outside the scope of this method
         Error(a.pos, "write to non-local var " + lhs.symbol.name + " inside the pure " + objName) :: soFar
+
+      case s: Select if violatesPurity(s, allowedImpures) ⇒ //this probably only happens when called in the typer phase
+        val msg = s.symbol match {
+          case s if s.isGetter      ⇒ "access to non-local var " + s.name + " inside the pure " + objName
+          case s if s.isConstructor ⇒ "impure method call to " + s.owner.name + ".<init> inside the pure " + objName
+          case s                    ⇒ "impure method call to " + s.name + " inside the pure " + objName
+        }
+        Error(s.pos, msg) :: soFar
       case s: Select if s.symbol.isSetter ⇒ //assign to var via setter
         Error(s.pos, "write to non-local var " + s.name.toString.dropRight(4) + " inside the pure " + objName) :: soFar
-
       case s: Select if s.symbol.isMutable && !s.symbol.ownerChain.contains(obj) ⇒ // read of var outside the scope of this method (private[this])
         Error(s.pos, "access to non-local var " + s.name + " inside the pure " + objName) :: soFar
-      case i: Ident if i.symbol.isMutable && !i.symbol.ownerChain.contains(obj) ⇒ // read of var defined in an outer function
-        Error(i.pos, "access to non-local var " + i.name + " inside the pure " + objName) :: soFar
       case s: Select if s.symbol.isGetter && !s.symbol.isStable ⇒ // read of var via accessor
         Error(s.pos, "access to non-local var " + s.name + "inside the pure " + objName) :: soFar
+      case Select(o, _) ⇒ handle(obj, objName, allowedImpures)(o, soFar)
+
+      case i: Ident if i.symbol.isMutable && !i.symbol.ownerChain.contains(obj) ⇒ // read of var defined in an outer function
+        Error(i.pos, "access to non-local var " + i.name + " inside the pure " + objName) :: soFar
 
       case d: DefDef   ⇒ soFar
       case c: ClassDef ⇒ soFar
@@ -224,19 +245,4 @@ trait PuscaDefinitions {
       case other       ⇒ other.children.foldLeft(soFar)((sf, e) ⇒ handle(obj, objName, allowedImpures)(e, sf))
     }
   }
-
-  trait RemoveUnnecessaryApplySideEffectBase extends Transformer {
-    override def transform(tree: Tree): Tree = tree match {
-      //remove applySideEffect
-      case ApplySideEffect(arg) if !hasAnnotation(arg.tpe, Annotation.sideEffect) ⇒
-        transform(arg)
-
-      //remove addSideEffect
-      case AddSideEffect(arg) if hasAnnotation(arg.tpe, Annotation.sideEffect) ⇒
-        transform(arg)
-
-      case other ⇒ super.transform(other)
-    }
-  }
-
 }
