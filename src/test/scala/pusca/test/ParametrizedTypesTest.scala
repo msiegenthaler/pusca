@@ -122,4 +122,91 @@ class ParametrizedTypesTest extends JUnitSuite with ShouldMatchersForJUnit {
     		}
         """) should yieldCompileError("impure method call to apply inside the pure method PFB.apply")
   }
+
+  @Test def renamedTypeParametersWithSuperTrait {
+    code("""
+        trait A[Z] {
+        	val f: () => Z
+        	@impureIf('Z) def exec: Unit = f() 
+    		}
+        class B[Y](override val f: () => Y) extends A[Y]
+        @pure def p = {
+        	val b = new B(() => "Hi")
+        	b.exec
+    		}
+        """) should compile
+  }
+  @Test def renamedTypeParametersWithSuperTraitImpure {
+    code("""
+        trait A[Z] {
+        	val f: () => Z
+        	@impureIf('Z) def exec: Unit = f() 
+    		}
+        class B[Y](override val f: () => Y) extends A[Y]
+        @pure def p = {
+        	val b = new B[String @sideEffect](() => "Hi")
+        	b.exec
+    		}
+        """) should yieldCompileError("impure method call to exec inside the pure method p")
+  }
+
+  @Test def caseClassWithTypeParameter {
+    code("case class Res[Z](value: Z)") should compile
+  }
+
+  @Test def renameTypeParametersWithType {
+    code("""
+        trait Res[Z]
+        class ResImpl[A](a: A) extends Res[A]
+        type Fun[X] = X => Res[X]
+        trait Y[B] {
+    			def handle(f: Res[B]) = ()
+    		}
+        def run[E](a: E) = a 
+        trait X[C] extends Y[C] {
+    			val f: Fun[C] = x => new ResImpl(x)
+	    		def exec(c: C) = run {
+        		handle(f(c))
+    			}
+    		}
+        """) should compile
+  }
+
+  @Test def outerClassTypeParameter {
+    code("""
+        trait A[Z] {
+        	trait Fun[A] extends Function1[A,Z]
+        	@impureIf('Z) def exec(f: Fun[String]) = f("Hi")
+    		}""") should compile
+  }
+  @Test def outerOuterClassTypeParameter {
+    code("""
+        trait A[Z] {
+        	trait Fun[A] extends Function1[A,Z]
+        	trait B[Y] {
+        		val a: Y
+    				@impureIf('Z) def exec(f: Fun[Y]) = f(a)
+    			}
+    		}""") should compile
+  }
+
+  @Test def outerMethodTypeParameter {
+    code("""
+        def o[Z] {
+        	trait Fun[A] extends Function1[A,Z]
+        	@impureIf('Z) def exec(f: Fun[String]) = f("Hi")
+        	()
+    		}""") should compile
+  }
+  @Test def outerOuterMethodTypeParameter {
+    code("""
+        def o[Z] {
+        	trait Fun[A] extends Function1[A,Z]
+        	def o2[Y](a: Y) {
+        		@impureIf('Z) def exec(f: Fun[Y]) = f(a)
+        		()
+    			}
+        	()
+    		}""") should compile
+  }
 }
