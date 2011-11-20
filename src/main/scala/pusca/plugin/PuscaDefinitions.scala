@@ -2,6 +2,7 @@ package pusca.plugin
 
 import scala.tools.nsc.Global
 import scala.tools.nsc.symtab.Flags._
+import scala.annotation.tailrec
 
 trait PuscaDefinitions {
   val global: Global
@@ -97,6 +98,7 @@ trait PuscaDefinitions {
     def purityOf(s: Symbol): Purity = s match {
       case s if s.isSetter                          ⇒ AlwaysImpure //setter of var
       case s if s.isGetter && !s.isStable           ⇒ AlwaysImpure //getter on var
+      case s if s.isGetter                          ⇒ AlwaysPure //  getter on val
       case s if hasAnnotation(s, Annotation.pure)   ⇒ AlwaysPure
       case s if hasAnnotation(s, Annotation.impure) ⇒ AlwaysImpure
       case s if hasAnnotation(s, Annotation.impureIf) ⇒
@@ -150,14 +152,32 @@ trait PuscaDefinitions {
         methodOwnerTypeParams(fun) ++ pl.zip(targs.map(_.tpe)).toMap
       case f ⇒ methodOwnerTypeParams(f)
     }
-    def methodOwnerTypeParams(a: Tree): Map[String, Type] = a match {
-      case Select(o, _) ⇒
-        o.tpe.underlying match {
+    def methodOwnerTypeParams(t: Tree): Map[String, Type] = {
+      def typeParamsDirect(tpe: Type): Map[String, Type] = {
+        tpe.underlying match {
           case TypeRef(p, s, a) ⇒
             s.typeParams.map(_.name.toString).zip(a).toMap
           case _ ⇒ Map()
         }
-      case _ ⇒ Map()
+      }
+      def typeParams(tpe: Type, lookingFor: Symbol): Map[String, Type] = {
+        def searchType(tpe: Type): Option[Type] = {
+          val l = lookingFor.tpe.underlying
+          val r = tpe.underlying match {
+            case TypeRef(p, s, a) ⇒ s.tpe
+            case t                ⇒ t
+          }
+          if (l == r) Some(tpe)
+          else tpe.parents.map(searchType).find(_.isDefined).getOrElse(None)
+        }
+        val parent = searchType(tpe)
+        typeParamsDirect(parent.getOrElse(tpe))
+      }
+      t match {
+        case s @ Select(o, _) ⇒ typeParams(o.tpe, s.symbol.owner)
+        case i: Ident         ⇒ typeParams(i.tpe, i.symbol.owner)
+        case _                ⇒ Map()
+      }
     }
 
     /** checks whether an apply is pure given the list of with names of type parameters that are allowed to be impure. */
@@ -176,6 +196,8 @@ trait PuscaDefinitions {
       def isAllowedImpure(tpe: Type) = tpe.typeSymbol.isTypeParameterOrSkolem && allowedImpures.contains(tpe.typeSymbol.name.toString)
 
       val tparams = tp.filter(e ⇒ di.contains(e._1))
+      if (di.filterNot(tparams.contains).nonEmpty)
+        println("Oo")
       di.filterNot(tparams.contains).foreach { p ⇒ reporter.error(pos, "unresolved type parameter " + p + " on call to " + f.fullName) }
       val ips = tparams.filter(e ⇒ mayHaveSideEffect(e._2) && !isAllowedImpure(e._2))
       ips.nonEmpty
@@ -211,9 +233,9 @@ trait PuscaDefinitions {
           case s                    ⇒ "impure method call to " + s.name + " inside the pure " + objName
         }
         Error(a.pos, msg) :: soFar
-      case a @ Apply(Select(o, _), args) =>
+      case a @ Apply(Select(o, _), args) ⇒
         (o :: args).foldLeft(soFar)((sf, e) ⇒ handle(obj, objName, allowedImpures)(e, sf))
-      case a @ Apply(TypeApply(Select(o, _), _), args) =>
+      case a @ Apply(TypeApply(Select(o, _), _), args) ⇒
         (o :: args).foldLeft(soFar)((sf, e) ⇒ handle(obj, objName, allowedImpures)(e, sf))
       case a: Apply ⇒
         a.children.foldLeft(soFar)((sf, e) ⇒ handle(obj, objName, allowedImpures)(e, sf))
