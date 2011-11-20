@@ -153,29 +153,15 @@ trait PuscaDefinitions {
       case f ⇒ methodOwnerTypeParams(f)
     }
     def methodOwnerTypeParams(t: Tree): Map[String, Type] = {
-      def typeParamsDirect(tpe: Type): Map[String, Type] = {
-        tpe.underlying match {
-          case TypeRef(p, s, a) ⇒
-            s.typeParams.map(_.name.toString).zip(a).toMap
-          case _ ⇒ Map()
-        }
-      }
       def typeParams(tpe: Type, lookingFor: Symbol): Map[String, Type] = {
-        def searchType(tpe: Type): Option[Type] = {
-          val l = lookingFor.tpe.underlying
-          val r = tpe.underlying match {
-            case TypeRef(p, s, a) ⇒ s.tpe
-            case t                ⇒ t
-          }
-          if (l == r) Some(tpe)
-          else tpe.parents.map(searchType).find(_.isDefined).getOrElse(None)
+        def tpsFor(o: Symbol, s: Symbol): Map[String,Type] = {
+        	s.typeParams.map(s ⇒ (s.name.toString, s.tpe.asSeenFrom(tpe, o))).toMap
         }
-        val parent = searchType(tpe)
-        typeParamsDirect(parent.getOrElse(tpe))
+        lookingFor.ownerChain.view.filter(_.typeParams.nonEmpty).foldLeft(Map[String,Type]())((s, e) => tpsFor(e, e) ++ s)
       }
       t match {
-        case s @ Select(o, _) ⇒ typeParams(o.tpe, s.symbol.owner)
-        case i: Ident         ⇒ typeParams(i.tpe, i.symbol.owner)
+        case s @ Select(o, _) ⇒ typeParams(o.tpe, s.symbol)
+        case i: Ident         ⇒ typeParams(i.tpe, i.symbol)
         case _                ⇒ Map()
       }
     }
@@ -196,12 +182,9 @@ trait PuscaDefinitions {
       def isAllowedImpure(tpe: Type) = tpe.typeSymbol.isTypeParameterOrSkolem && allowedImpures.contains(tpe.typeSymbol.name.toString)
 
       val tparams = tp.filter(e ⇒ di.contains(e._1))
-      if (di.filterNot(tparams.contains).nonEmpty)
-        println("Oo")
       di.filterNot(tparams.contains).foreach { p ⇒ reporter.error(pos, "unresolved type parameter " + p + " on call to " + f.fullName) }
       val ips = tparams.filter(e ⇒ mayHaveSideEffect(e._2) && !isAllowedImpure(e._2))
       ips.nonEmpty
-
     }
   }
 
