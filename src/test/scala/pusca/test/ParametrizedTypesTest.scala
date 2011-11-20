@@ -171,21 +171,26 @@ class ParametrizedTypesTest extends JUnitSuite with ShouldMatchersForJUnit {
     		}
         """) should compile
   }
-
+  
   @Test def outerClassTypeParameter {
     code("""
         trait A[Z] {
         	trait Fun[A] extends Function1[A,Z]
         	@impureIf('Z) def exec(f: Fun[String]) = f("Hi")
+        	
+        	def b: Z
+        	@impureIf('Z) def x = exec(new Fun[String] { override def apply(a: String) = b })
     		}""") should compile
   }
   @Test def outerOuterClassTypeParameter {
     code("""
         trait A[Z] {
+        	def b: Z
         	trait Fun[A] extends Function1[A,Z]
         	trait B[Y] {
         		val a: Y
     				@impureIf('Z) def exec(f: Fun[Y]) = f(a)
+        		@impureIf('Z) def x = exec(new Fun[Y] { override def apply(a: Y) = b }) 
     			}
     		}""") should compile
   }
@@ -208,5 +213,22 @@ class ParametrizedTypesTest extends JUnitSuite with ShouldMatchersForJUnit {
     			}
         	()
     		}""") should compile
+  }
+  
+  @Test def failureInStatelessActor {
+    code("""
+        type ActorFun[M] = Function1[M,Unit]
+        trait ExecutionStrategy {
+        	def apply(f: => Unit): Unit
+    		}
+    		trait StatelessActorImpl[M] {
+    			val f: ActorFun[M]
+    			val strategy: ExecutionStrategy
+    			def processMessage(msg: M) = strategy {
+        		val a = f(msg)
+        		()
+    			}
+    		}
+        """) should compile
   }
 }
