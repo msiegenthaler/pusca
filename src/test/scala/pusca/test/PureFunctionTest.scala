@@ -101,4 +101,14 @@ class PureFunctionTest extends JUnitSuite with ShouldMatchersForJUnit {
   			}
   	""") should yieldCompileError("impure method call to apply inside the pure method X.exec")
   }
+  
+	@Test def usePureFunWithParametrizedTypeInTrait {
+		code("trait Box[A,B] { val f: A -> B }") should compile
+	}
+	@Test def usePureFunWithParametrizedTypeInClass {
+		code("class Box[A,B](f: A -> B)") should compile
+	}
+  @Test def usePureFunWithParametrizedTypeInCaseClass {
+    code("case class Box[A,B](f: A -> B)") should compile
+  }
 }
