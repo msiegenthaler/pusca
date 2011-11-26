@@ -38,3 +38,9 @@ class impureIf(params: Symbol*) extends PurenessAnnotation
  * by the method (or the method depends on a side effect
  */
 class sideEffect extends StaticAnnotation with TypeConstraint
+
+/**
+ * Used to mark functions (Function1-Function22) that are pure.
+ * Use via the PureFunction1-PureFunction22 (resp. A -> B) types, instead of declaring them yourself. 
+ */
+class pureFun extends StaticAnnotation with TypeConstraint

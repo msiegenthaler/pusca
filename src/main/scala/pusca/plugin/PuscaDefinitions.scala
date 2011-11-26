@@ -12,14 +12,14 @@ trait PuscaDefinitions {
     def apply(annotation: Symbol): AnnotationInfo = AnnotationInfo(annotation.tpe, Nil, Nil)
 
     val sideEffect = definitions.getClass("pusca.sideEffect")
-    val pureFun = definitions.getClass("pusca.__purefun")
+    val pureFun = definitions.getClass("pusca.pureFun")
+    val allForReturn = sideEffect :: pureFun :: Nil
+    
     val pure = definitions.getClass("pusca.pure")
     val impure = definitions.getClass("pusca.impure")
     val impureIf = definitions.getClass("pusca.impureIf")
     val declarePure = definitions.getClass("pusca.declarePure")
-
     val allForMethod = pure :: impure :: impureIf :: declarePure :: Nil
-    val allForReturn = sideEffect :: pureFun :: Nil
   }
 
   lazy val function = (1 to 22).map(i ⇒ definitions.getClass("scala.Function" + i))
