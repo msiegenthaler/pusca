@@ -16,6 +16,9 @@ trait PuscaDefinitions {
     val impure = definitions.getClass("pusca.impure")
     val impureIf = definitions.getClass("pusca.impureIf")
     val declarePure = definitions.getClass("pusca.declarePure")
+    
+    val allForMethod = pure :: impure :: impureIf :: declarePure :: Nil
+    val allForReturn = sideEffect :: Nil
   }
 
   protected def hasAnnotation(tpe: Type, a: Symbol): Boolean = {

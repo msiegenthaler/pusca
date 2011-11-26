@@ -18,6 +18,42 @@ class PurityDefinitionTest extends JUnitSuite with ShouldMatchersForJUnit {
     new PluginTester().fromString(definition).fromString(a).fromString(b).run should
       yieldCompileError("impure method call to " + n + " inside the pure method checker")
   }
+  
+  @Test def pureAndImpure {
+    code("@pure @impure def a = 10") should yieldCompileError("method a has multiple purity annotations")
+  }
+  @Test def pureAndImpureIf {
+    code("@pure @impureIf('A) def a = 10") should yieldCompileError("method a has multiple purity annotations")
+  }
+  @Test def impureAndImpureIf {
+    code("@impure @impureIf('A) def a = 10") should yieldCompileError("method a has multiple purity annotations")
+  }
+  @Test def pureAndDeclarePure {
+    code("@pure @declarePure def a = 10") should yieldCompileError("method a has multiple purity annotations")
+  }
+  @Test def impureAndDeclarePure {
+    code("@impure @declarePure def a = 10") should yieldCompileError("method a has multiple purity annotations")
+  }
+  @Test def impureIfAndDeclarePure {
+    code("@impureIf @declarePure def a = 10") should yieldCompileError("method a has multiple purity annotations")
+  }
+  
+  @Test def cannotUseSideEffectOnMethod {
+    code("@sideEffect def a = 10") should yieldCompileError("@sideEffect does not apply to methods but only to types")
+  }
+  
+  @Test def cannotUsePureOnReturnType {
+    code("def a: Int @pure = 10") should yieldCompileError("purity annotation @pure can only be used on a method, not on the return type")
+  }
+  @Test def cannotUseImpureOnReturnType {
+  	code("def a: Int @impure = 10") should yieldCompileError("purity annotation @impure can only be used on a method, not on the return type")
+  }
+  @Test def cannotUseDeclarePureOnReturnType {
+  	code("def a: Int @declarePure = 10") should yieldCompileError("purity annotation @declarePure can only be used on a method, not on the return type")
+  }
+  @Test def cannotUseImpureIfOnReturnType {
+  	code("def a: Int @impureIf('A) = 10") should yieldCompileError("purity annotation @impureIf can only be used on a method, not on the return type")
+  }
 
   @Test def defPureFunctionImplicit {
     assertPure("def p(x: Int) = x * 2", "p(0)")
