@@ -7,6 +7,7 @@ import scala.tools.nsc.settings._
 import scala.tools.nsc.interpreter._
 import org.scalatest.matchers.MatchResult
 import org.scalatest.matchers.Matcher
+import pusca.plugin._
 
 object PluginTester {
   def apply(code: String) = new PluginTester().fromString(code).run
@@ -76,19 +77,69 @@ class PluginTester {
     doRead("")
   }
 
+  private def jarForClass(a: Class[_]) = {
+    val classFile = "/" + a.getName.replace(".", "/") + ".class"
+    val res = getClass.getResource(classFile).toString
+    val r = if (res.startsWith("file:")) res.drop("file:".length).dropRight(classFile.length)
+    else if (res.startsWith("jar:")) res.drop("jar:file:".length).dropRight(classFile.length() + 1)
+    else throw new RuntimeException("Cannot find path for " + res)
+    r
+  }
+
+  //the jar with all the plugin classes inside.
+  lazy val pluginJar = {
+    import java.util.jar._
+    import java.io._
+    val file = File.createTempFile("archive", ".jar")
+    val fos = new FileOutputStream(file)
+    val jos = new JarOutputStream(fos, new Manifest)
+    val buffer = new Array[Byte](1024)
+
+    def processDir(path: String, dir: File) {
+      dir.listFiles.foreach { f ⇒
+        if (f.isDirectory) {
+          val np = path + f.getName + "/"
+          jos.putNextEntry(new JarEntry(np))
+          processDir(np, f)
+        } else if (f.isFile) processFile(path, f)
+      }
+    }
+    @tailrec def copy(in: InputStream, out: OutputStream) {
+      val read = in.read(buffer, 0, buffer.length)
+      if (read != -1) {
+        out.write(buffer, 0, read)
+        copy(in, out)
+      } else ()
+    }
+    def processFile(path: String, file: File) {
+      jos.putNextEntry(new JarEntry(path + file.getName))
+      val fis = new FileInputStream(file)
+      copy(fis, jos)
+      fis.close
+    }
+
+    val dir = new File(jarForClass(classOf[PurePlugin]))
+    processDir("", dir)
+
+    jos.close
+    file.deleteOnExit
+    file
+  }
+
   def run = {
     val out = new StringWriter
     try {
       val s = new Settings()
-      s.embeddedDefaults[String]
-      s.embeddedDefaults[pusca.pure]
-      s.usejavacp.value = true
+      s.usejavacp.value = false
       s.require.appendToValue("pure")
-      //point to the compiled classfiles
-      //s.pluginsDir.value = (new File("target/scala-2.9.1/classes").getAbsoluteFile.toString + "/") //sbt
-      s.pluginsDir.value = (new File(".target/scala-2.9.1/classes").getAbsoluteFile.toString + "/") //eclipse
-      //must be inside a jar
-      s.plugin.appendToValue(new File("src/test/pusca-descriptor.jar").getAbsoluteFile.toString)
+
+      s.classpath.value = ""
+      s.classpath.append(jarForClass(classOf[List[_]])) //library
+      s.classpath.append(jarForClass(classOf[IMain])) //compiler
+      s.classpath.append(jarForClass(classOf[PurePlugin]))
+
+      //plugin classes must be inside a jar
+      s.plugin.appendToValue(pluginJar.getAbsoluteFile.toString)
 
       val main = new IMain(s, new PrintWriter(out))
 
@@ -101,8 +152,6 @@ class PluginTester {
       val warnings = outLines.
         filter(_.startsWith("<console>:")).
         filter(_.contains("warning: "))
-
-      println(out)
 
       PluginTestResult(out.toString, None, if (errors.isEmpty) cs else errors, warnings)
     } catch {
