@@ -71,4 +71,34 @@ class PureFunctionTest extends JUnitSuite with ShouldMatchersForJUnit {
   			val b: String -> Int = a
   	""") should yieldCompileError("type mismatch")
   }
+
+  @Test def pureFunctionApplyIsPure {
+    code("""
+        val f: String -> Int = (a: String) => a.length
+        @pure def p = f("Hello")
+        """) should compile
+  }
+
+  @Test def pureFunctionApplyIsPureOnParameterized {
+    code("""
+        trait X[A] {
+        	val f: String -> A
+        	@pure def exec = {
+        		f("Hello")
+        		()
+    			}
+    		}
+        """) should compile
+  }
+  @Test def normalFunctionApplyIsImpureOnParameterized {
+    code("""
+  			trait X[A] {
+  			  val f: String => A
+	  			@pure def exec = {
+    				f("Hello")
+    				()
+	  			}
+  			}
+  	""") should yieldCompileError("impure method call to apply inside the pure method X.exec")
+  }
 }
