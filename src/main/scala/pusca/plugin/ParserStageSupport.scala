@@ -1,7 +1,7 @@
 package pusca.plugin
 import scala.tools.nsc.Global
 
-trait ParserStageSupport {
+private[plugin] trait ParserStageSupport {
   val global: Global
   import global._
 
