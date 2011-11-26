@@ -12,7 +12,7 @@ There are two possibilities to declare a method as impure:
 	def println(s: String): Unit @sideEffect
 or
 	@impure def println(s: String): Unit
-Both variants are equal, there are no difference between them. The compiler can infer the impureness of a method if the
+Both variants are equal, there are no difference between them. The compiler can infer the impurity of a method if the
 last statement of the method body is a call to an impure method.
 	def hello = println("Hi there) // inferred to 'def hello: Unit @sideEffect' 
 
@@ -20,14 +20,23 @@ Methods that would be considered impure according to the rules above can be decl
 compiler will not check if those methods really are referential transparent or cause no side effects, this is the
 responsibility of the developer. Use this syntax to declare a method as pure
 	@declarePure def log(s: String) { println("LOG "+s) }
+	
+For methods that make use of type parameters that purity might depend on the purity of those parameters. This is specified
+using the @impureIf annotation:
+	@impureIf('B) def exec[B](f: () => B): Unit = f()
+The @impureIf annotation might reference any of the type parameters that can be used inside the method. If the method returns
+a parameterized type, then that type is automatically used as @impureIf if no purity annotation is used:
+	def exec[B](f: () => B): B = f()   //equals @impureIf('B)
 
-Constructor: Is considered a normal method, but is annotated on the class itself. The @impure and @declarePure annotations
+
+A Constructor is considered a normal method, but is annotated on the class itself. The @impure and @declarePure annotations
 can be used. Example:
 	@impure class MyClass {
 		println("Hi") // impure call
 	} 
-
 	
+
+
 	
 	
 LIMITATIONS:
