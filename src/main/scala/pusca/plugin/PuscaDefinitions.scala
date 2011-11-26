@@ -14,7 +14,7 @@ trait PuscaDefinitions {
     val sideEffect = definitions.getClass("pusca.sideEffect")
     val pureFun = definitions.getClass("pusca.pureFun")
     val allForReturn = sideEffect :: pureFun :: Nil
-    
+
     val pure = definitions.getClass("pusca.pure")
     val impure = definitions.getClass("pusca.impure")
     val impureIf = definitions.getClass("pusca.impureIf")
@@ -25,8 +25,20 @@ trait PuscaDefinitions {
   lazy val function = (1 to 22).map(i ⇒ definitions.getClass("scala.Function" + i))
   private def functionBaseClass(tpe: Type) = tpe.baseClasses.find(function.contains)
   protected def isFun(tpe: Type) = functionBaseClass(tpe).isDefined
+  protected def isPureFun(tpe: Type) = isFun(tpe) && hasAnnotation(tpe, Annotation.pureFun)
   protected def funResultType(fun: Type) = functionBaseClass(fun).map { ft ⇒
     ft.typeParams.last.tpe.asSeenFrom(fun, ft)
+  }
+  /** method is or overrides apply in a Function1, Function2 etc. */
+  object FunApply {
+    private val applyName = stringToTermName("apply")
+    def unapply(s: Symbol) = s match {
+      case m: MethodSymbol if m.name == applyName ⇒
+        val owners = m.allOverriddenSymbols.view.map(_.owner) :+ m.owner
+        owners.find(function.contains).map(_ ⇒ m)
+      case _ ⇒ None
+    }
+    def is(s: Symbol) = unapply(s).isDefined
   }
 
   protected def hasAnnotation(tpe: Type, a: Symbol): Boolean = {
@@ -178,10 +190,15 @@ trait PuscaDefinitions {
     }
 
     /** checks whether an apply is pure given the list of with names of type parameters that are allowed to be impure. */
-    def violatesPurity(a: Apply, allowedImpures: Set[String]): Boolean = purityOf(a.fun.symbol) match {
-      case AlwaysPure            ⇒ false
-      case AlwaysImpure          ⇒ true
-      case ImpureDependingOn(di) ⇒ violates(di, allowedImpures, resolveTypeParams(a), a.pos, a.fun.symbol)
+    def violatesPurity(a: Apply, allowedImpures: Set[String]): Boolean = a match {
+      case Apply(f @ Select(o, _), _) if FunApply.is(f.symbol) && hasAnnotation(o.tpe.underlying, Annotation.pureFun) ⇒
+      	//apply of a PureFunction
+        false
+      case Apply(f, _) ⇒ purityOf(f.symbol) match {
+        case AlwaysPure            ⇒ false
+        case AlwaysImpure          ⇒ true
+        case ImpureDependingOn(di) ⇒ violates(di, allowedImpures, resolveTypeParams(a), a.pos, a.fun.symbol)
+      }
     }
     def violatesPurity(s: Select, allowedImpures: Set[String]): Boolean = purityOf(s.symbol) match {
       case AlwaysPure            ⇒ false
@@ -208,12 +225,10 @@ trait PuscaDefinitions {
     def apply(d: DefDef): List[Error] = apply(d.symbol, "method " + d.symbol.fullName, d.rhs)
     def apply(c: ClassDef): List[Error] = apply(c.symbol, "class " + c.symbol.fullName, c.impl)
     def apply(f: Function): List[Error] = apply(f.symbol, "function " + f.symbol.fullName, f.body)
-    def apply(obj: Symbol, objName: String, content: Tree): List[Error] = {
-      purityOf(obj) match {
-        case AlwaysPure                 ⇒ handle(obj, objName, Set.empty)(content)
-        case AlwaysImpure               ⇒ Nil
-        case ImpureDependingOn(impures) ⇒ handle(obj, objName, impures)(content)
-      }
+    def apply(obj: Symbol, objName: String, content: Tree): List[Error] = purityOf(obj) match {
+      case AlwaysPure                 ⇒ handle(obj, objName, Set.empty)(content)
+      case AlwaysImpure               ⇒ Nil
+      case ImpureDependingOn(impures) ⇒ handle(obj, objName, impures)(content)
     }
 
     private[this] def handle(obj: Symbol, objName: String, allowedImpures: Set[String])(t: Tree, soFar: List[Error] = Nil): List[Error] = t match {

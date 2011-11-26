@@ -23,7 +23,7 @@ class ImpureFunctionComponent(val global: Global) extends PluginComponent with P
         t match {
           case t: TypeTree ⇒
             val tpe = t.tpe.normalize
-            if (hasAnnotation(tpe, Annotation.pureFun) && funResultType(tpe).filter(hasSideEffect).isDefined)
+            if (isPureFun(tpe) && funResultType(tpe).filter(hasSideEffect).isDefined)
               reporter.error(t.pos, "PureFunction mustn't have a side effect")
           case _ ⇒ ()
         }
