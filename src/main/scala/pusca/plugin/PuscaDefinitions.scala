@@ -12,13 +12,21 @@ trait PuscaDefinitions {
     def apply(annotation: Symbol): AnnotationInfo = AnnotationInfo(annotation.tpe, Nil, Nil)
 
     val sideEffect = definitions.getClass("pusca.sideEffect")
+    val pureFun = definitions.getClass("pusca.__purefun")
     val pure = definitions.getClass("pusca.pure")
     val impure = definitions.getClass("pusca.impure")
     val impureIf = definitions.getClass("pusca.impureIf")
     val declarePure = definitions.getClass("pusca.declarePure")
-    
+
     val allForMethod = pure :: impure :: impureIf :: declarePure :: Nil
-    val allForReturn = sideEffect :: Nil
+    val allForReturn = sideEffect :: pureFun :: Nil
+  }
+
+  lazy val function = (1 to 22).map(i ⇒ definitions.getClass("scala.Function" + i))
+  private def functionBaseClass(tpe: Type) = tpe.baseClasses.find(function.contains)
+  protected def isFun(tpe: Type) = functionBaseClass(tpe).isDefined
+  protected def funResultType(fun: Type) = functionBaseClass(fun).map { ft ⇒
+    ft.typeParams.last.tpe.asSeenFrom(fun, ft)
   }
 
   protected def hasAnnotation(tpe: Type, a: Symbol): Boolean = {
@@ -157,10 +165,10 @@ trait PuscaDefinitions {
     }
     def methodOwnerTypeParams(t: Tree): Map[String, Type] = {
       def typeParams(tpe: Type, lookingFor: Symbol): Map[String, Type] = {
-        def tpsFor(o: Symbol, s: Symbol): Map[String,Type] = {
-        	s.typeParams.map(s ⇒ (s.name.toString, s.tpe.asSeenFrom(tpe, o))).toMap
+        def tpsFor(o: Symbol, s: Symbol): Map[String, Type] = {
+          s.typeParams.map(s ⇒ (s.name.toString, s.tpe.asSeenFrom(tpe, o))).toMap
         }
-        lookingFor.ownerChain.view.filter(_.typeParams.nonEmpty).foldLeft(Map[String,Type]())((s, e) => tpsFor(e, e) ++ s)
+        lookingFor.ownerChain.view.filter(_.typeParams.nonEmpty).foldLeft(Map[String, Type]())((s, e) ⇒ tpsFor(e, e) ++ s)
       }
       t match {
         case s @ Select(o, _) ⇒ typeParams(o.tpe, s.symbol)

@@ -12,8 +12,10 @@ abstract class SideEffectChecker extends PuscaDefinitions {
     private def withSideEffect(tpe: Type) = annotateWith(tpe, Annotation.sideEffect)
 
     def annotationsConform(tpe1: Type, tpe2: Type): Boolean = {
-      //println("# annotations " + tpe1 + " conforms to " + tpe2 + ": " + (hasSideEffect(tpe2) || !hasSideEffect(tpe1)))
-      hasSideEffect(tpe2) || !hasSideEffect(tpe1)
+      //println("# annotations " + tpe1 + " conforms to " + tpe2)
+      val pureFunAnnotMatches = !hasAnnotation(tpe2, Annotation.pureFun) || funResultType(tpe1).filterNot(hasSideEffect).isDefined
+      val sideEffectMatches = hasSideEffect(tpe2) || !hasSideEffect(tpe1)
+      sideEffectMatches && pureFunAnnotMatches
     }
 
     override def annotationsGlb(tp: Type, ts: List[Type]): Type = {
