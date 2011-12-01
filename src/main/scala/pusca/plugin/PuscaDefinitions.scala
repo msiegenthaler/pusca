@@ -16,7 +16,7 @@ trait PuscaDefinitions {
     val impure = definitions.getClass("pusca.impure")
     val impureIf = definitions.getClass("pusca.impureIf")
     val declarePure = definitions.getClass("pusca.declarePure")
-    
+
     val allForMethod = pure :: impure :: impureIf :: declarePure :: Nil
     val allForReturn = sideEffect :: Nil
   }
@@ -41,7 +41,13 @@ trait PuscaDefinitions {
   protected lazy val markReturnValueMethod = definitions.getMember(puscaPackage, "__internal__markReturnValue")
   protected lazy val markReturnValueWithSideEffectMethod = definitions.getMember(puscaPackage, "__internal__markReturnValueWithSideEffect")
 
-  def hasSideEffect(t: Type) = hasAnnotation(t, Annotation.sideEffect)
+  def hasSideEffect(t: Type) = {
+    if (t.typeSymbol.isTypeParameterOrSkolem) {
+      val lo = t.bounds.lo.underlying.dealias
+      val hi = t.bounds.hi.underlying.dealias
+      hasAnnotation(t, Annotation.sideEffect) || hasAnnotation(lo, Annotation.sideEffect) || hasAnnotation(hi, Annotation.sideEffect)
+    } else hasAnnotation(t, Annotation.sideEffect)
+  }
 
   object ApplySideEffect {
     def unapply(t: Tree) = t match {
@@ -113,9 +119,10 @@ trait PuscaDefinitions {
       case s if s.isConstructor ⇒ purityOf(s.owner)
       case s: MethodSymbol ⇒ //impureIfImpureResult
         val rt = resultType(s)
-        if (hasSideEffect(rt)) AlwaysImpure
-        else if (rt.typeSymbol.isTypeParameterOrSkolem) ImpureDependingOn(Set(rt.typeSymbol.name.toString))
-        else AlwaysPure
+        if (hasSideEffect(rt)) {
+          if (rt.typeSymbol.isTypeParameterOrSkolem) ImpureDependingOn(Set(rt.typeSymbol.name.toString))
+          else AlwaysImpure
+        } else AlwaysPure
       case _ ⇒ AlwaysPure
     }
     private def resultType(t: MethodSymbol): Type = {
@@ -157,10 +164,10 @@ trait PuscaDefinitions {
     }
     def methodOwnerTypeParams(t: Tree): Map[String, Type] = {
       def typeParams(tpe: Type, lookingFor: Symbol): Map[String, Type] = {
-        def tpsFor(o: Symbol, s: Symbol): Map[String,Type] = {
-        	s.typeParams.map(s ⇒ (s.name.toString, s.tpe.asSeenFrom(tpe, o))).toMap
+        def tpsFor(o: Symbol, s: Symbol): Map[String, Type] = {
+          s.typeParams.map(s ⇒ (s.name.toString, s.tpe.asSeenFrom(tpe, o))).toMap
         }
-        lookingFor.ownerChain.view.filter(_.typeParams.nonEmpty).foldLeft(Map[String,Type]())((s, e) => tpsFor(e, e) ++ s)
+        lookingFor.ownerChain.view.filter(_.typeParams.nonEmpty).foldLeft(Map[String, Type]())((s, e) ⇒ tpsFor(e, e) ++ s)
       }
       t match {
         case s @ Select(o, _) ⇒ typeParams(o.tpe, s.symbol)
@@ -181,12 +188,11 @@ trait PuscaDefinitions {
       case ImpureDependingOn(di) ⇒ violates(di, allowedImpures, methodOwnerTypeParams(s), s.pos, s.symbol)
     }
     private def violates(di: Set[String], allowedImpures: Set[String], tp: Map[String, Type], pos: Position, f: Symbol): Boolean = {
-      def mayHaveSideEffect(tpe: Type) = hasSideEffect(tpe) || tpe.typeSymbol.isTypeParameterOrSkolem
       def isAllowedImpure(tpe: Type) = tpe.typeSymbol.isTypeParameterOrSkolem && allowedImpures.contains(tpe.typeSymbol.name.toString)
 
       val tparams = tp.filter(e ⇒ di.contains(e._1))
       di.filterNot(tparams.contains).foreach { p ⇒ reporter.error(pos, "unresolved type parameter " + p + " on call to " + f.fullName) }
-      val ips = tparams.filter(e ⇒ mayHaveSideEffect(e._2) && !isAllowedImpure(e._2))
+      val ips = tparams.filter(e ⇒ hasSideEffect(e._2) && !isAllowedImpure(e._2))
       ips.nonEmpty
     }
   }

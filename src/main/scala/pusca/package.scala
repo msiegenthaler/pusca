@@ -1,6 +1,8 @@
 import scala.annotation.TypeConstraint
 
 package object pusca {
+  /** Any with side effect */
+  type SideEffect = Any @sideEffect
 
   /** removes the @sideEffect annotation */
   @inline def applySideEffect[A](a: A @sideEffect): A = a
