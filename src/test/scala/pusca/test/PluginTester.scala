@@ -14,7 +14,9 @@ object PluginTester {
 
   class CompilesMatcher extends Matcher[PluginTestResult] {
     override def apply(r: PluginTestResult) = {
-      MatchResult(r.compiled && r.warnings.isEmpty && r.exception.isEmpty,
+      val success = r.compiled && r.warnings.isEmpty && r.exception.isEmpty
+      if (!success) println(r.out)
+      MatchResult(success,
         "The compilation failed: " + (r.compileErrors :: r.warnings :: r.exception.map(e ⇒ List(e.toString)).getOrElse(Nil)).mkString(", "),
         "The compilation did not fail")
     }
@@ -27,7 +29,9 @@ object PluginTester {
         (if (r.exception.isDefined) "Exception during compilation: " + r.exception.get else ""),
         (if (!expectedButNotFound.isEmpty) "Missing compilation errors: " + expectedButNotFound.mkString(", ") else ""),
         (if (!unexpected.isEmpty || !r.warnings.isEmpty) "Unexpected compilation errors/warnings: " + (unexpected ::: r.warnings).mkString(", ") else "")).mkString(". ")
-      MatchResult(r.warnings.isEmpty && expectedButNotFound.isEmpty && unexpected.isEmpty && r.exception.isEmpty, errors, "NOT " + errors)
+      val success = r.warnings.isEmpty && expectedButNotFound.isEmpty && unexpected.isEmpty && r.exception.isEmpty
+      if (!success) println(r.out)
+      MatchResult(success, errors, "NOT " + errors)
     }
   }
   class CompileWarnsMatcher(expect: List[String]) extends Matcher[PluginTestResult] {
@@ -38,7 +42,9 @@ object PluginTester {
         (if (r.exception.isDefined) "Exception during compilation: " + r.exception.get else ""),
         (if (!expectedButNotFound.isEmpty) "Missing compilation warning: " + expectedButNotFound.mkString(", ") else ""),
         (if (!unexpected.isEmpty || !r.compileErrors.isEmpty) "Unexpected compilation errors/warnings: " + (r.compileErrors ::: unexpected).mkString(", ") else "")).mkString(". ")
-      MatchResult(r.compileErrors.isEmpty && expectedButNotFound.isEmpty && unexpected.isEmpty && r.exception.isEmpty, errors, "NOT " + errors)
+      val success = r.compileErrors.isEmpty && expectedButNotFound.isEmpty && unexpected.isEmpty && r.exception.isEmpty
+      if (!success) println(r.out)
+      MatchResult(success, errors, "NOT " + errors)
     }
   }
 
