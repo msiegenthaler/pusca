@@ -6,7 +6,6 @@ import org.junit.Test
 import PluginTester._
 
 class Wildcard extends JUnitSuite with ShouldMatchersForJUnit {
-
   @Test def purePreservesType {
     code("@impure def x[A <: Pure[String]](f: () => A): String = f()") should compile
   }
@@ -52,7 +51,7 @@ class Wildcard extends JUnitSuite with ShouldMatchersForJUnit {
   			@pure def x[A <: Pure[Int]](f: String => A): Int = f("Hello")
   			@impure def len(x: String) = x.length
   			@pure def p = x[Int @sideEffect](len)
-  	""") should yieldCompileError("type mismatch")
+  		""") should yieldCompileError("type mismatch")
   }
   
   @Test def funWithoutPureReturnTypeDoesNotAllowImpureFunction {
@@ -62,5 +61,52 @@ class Wildcard extends JUnitSuite with ShouldMatchersForJUnit {
         def p = x[Int @sideEffect](len)
         """) should compile
   }
-
+  
+	@Test def canAssignSideEffectFreeToPure {
+		code("""
+				class A[X <: Pure[Int]](val f: String => X) {}
+				@pure def len(a: String) = 10
+				@pure def p = new A(len)
+			""") should compile
+	}
+	
+  @Test def cannotAssignSideEffectToPure {
+    code("""
+        class A[X <: Pure[Int]](val f: String => X) {}
+        @impure def len(a: String) = 10
+        @pure def p = new A(len)
+        """) should yieldCompileError("type mismatch")
+  }
+  @Test def cannotAssignSideEffectToPure2 {
+  	code("""
+  			class A[X <: Pure[Int]](val f: String => X) {}
+  			@impure def len(a: String) = 10
+  			@pure def p = new A[Int @sideEffect](len)
+  		""") should yieldCompileError("type mismatch")
+  }
+  
+  @Test def cannotAssignSideEffectFunToPureFun {
+    code("""
+        val f: String => Int @sideEffect = (v: String) => v.length
+        val g: String => Pure[Int] = f
+        """) should yieldCompileError("type mismatch")
+  }
+  
+  @Test def canAssignNormalToPure {
+  	code("""
+  	    val a: Pure[String] = "Hello"
+  			""") should compile
+  }
+  @Test def canAssignPureToNormal {
+  	code("""
+  			val a: Pure[String] = "Hello"
+  	    val b: String = a
+  	""") should compile
+  }
+  @Test def canAssignPureToSideEffect{
+  	code("""
+  	    val a: String => Pure[Int] = (v: String) => v.length
+  	    val f: String => Int @sideEffect = a
+  			""") should compile
+  }
 }
