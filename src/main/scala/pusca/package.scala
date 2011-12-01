@@ -1,6 +1,8 @@
 import scala.annotation.TypeConstraint
 
 package object pusca {
+  /** The type A in a form that does not allow @sideEffect to be used on it */
+  type Pure[A] = A @sef
 
   /** removes the @sideEffect annotation */
   @inline def applySideEffect[A](a: A @sideEffect): A = a
