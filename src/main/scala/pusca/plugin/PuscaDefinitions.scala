@@ -45,7 +45,9 @@ trait PuscaDefinitions {
     if (t.typeSymbol.isTypeParameterOrSkolem) {
       val lo = t.bounds.lo.underlying.dealias
       val hi = t.bounds.hi.underlying.dealias
-      hasAnnotation(t, Annotation.sideEffect) || hasAnnotation(lo, Annotation.sideEffect) || hasAnnotation(hi, Annotation.sideEffect)
+      val r = hasAnnotation(t, Annotation.sideEffect) || hasAnnotation(lo, Annotation.sideEffect) || hasAnnotation(hi, Annotation.sideEffect)
+      println("@@ " + t + "    " + lo + "    " + hi + "   ==> sideEffect=" + r)
+      r
     } else hasAnnotation(t, Annotation.sideEffect)
   }
 
@@ -177,10 +179,24 @@ trait PuscaDefinitions {
     }
 
     /** checks whether an apply is pure given the list of with names of type parameters that are allowed to be impure. */
-    def violatesPurity(a: Apply, allowedImpures: Set[String]): Boolean = purityOf(a.fun.symbol) match {
-      case AlwaysPure            ⇒ false
-      case AlwaysImpure          ⇒ true
-      case ImpureDependingOn(di) ⇒ violates(di, allowedImpures, resolveTypeParams(a), a.pos, a.fun.symbol)
+    def violatesPurity(a: Apply, allowedImpures: Set[String]): Boolean = {
+      //TODO
+      a.fun.symbol match {
+        case s: MethodSymbol ⇒
+          val r = resultType(s)
+          if (r.typeSymbol.isTypeParameterOrSkolem) {
+            val as = r.asSeenFrom(a.tpe, a.tpe.typeSymbol)
+            println("@@@ r=" + r + "    as=" + as)
+            println("### a.tpe " + a.tpe.underlying.dealias + "   " + a.tpe.underlying.dealias.bounds)
+          }
+        case _ ⇒ ()
+      }
+
+      purityOf(a.fun.symbol) match {
+        case AlwaysPure            ⇒ false
+        case AlwaysImpure          ⇒ true
+        case ImpureDependingOn(di) ⇒ violates(di, allowedImpures, resolveTypeParams(a), a.pos, a.fun.symbol)
+      }
     }
     def violatesPurity(s: Select, allowedImpures: Set[String]): Boolean = purityOf(s.symbol) match {
       case AlwaysPure            ⇒ false
