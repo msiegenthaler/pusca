@@ -244,5 +244,19 @@ class PurityTest extends JUnitSuite with ShouldMatchersForJUnit {
     		}
         """) should compile
   }
-
+  
+  @Test def declarePureOnImpure {
+    code("""
+        @impure def ip = "Bla"
+        @declarePure def dp = ip
+        @pure def p = dp
+        """) should compile
+  }
+  @Test def declarePureOnImpure2 {
+    code("""
+        @impure def ip = "Bla"
+        @declarePure def dp: String = ip
+        @pure def p = dp
+        """) should compile
+  }
 }
