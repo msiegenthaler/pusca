@@ -16,7 +16,7 @@ trait PuscaDefinitions {
     val impure = definitions.getClass("pusca.impure")
     val impureIf = definitions.getClass("pusca.impureIf")
     val declarePure = definitions.getClass("pusca.declarePure")
-    
+
     val allForMethod = pure :: impure :: impureIf :: declarePure :: Nil
     val allForReturn = sideEffect :: Nil
   }
@@ -157,10 +157,10 @@ trait PuscaDefinitions {
     }
     def methodOwnerTypeParams(t: Tree): Map[String, Type] = {
       def typeParams(tpe: Type, lookingFor: Symbol): Map[String, Type] = {
-        def tpsFor(o: Symbol, s: Symbol): Map[String,Type] = {
-        	s.typeParams.map(s ⇒ (s.name.toString, s.tpe.asSeenFrom(tpe, o))).toMap
+        def tpsFor(o: Symbol, s: Symbol): Map[String, Type] = {
+          s.typeParams.map(s ⇒ (s.name.toString, s.tpe.asSeenFrom(tpe, o))).toMap
         }
-        lookingFor.ownerChain.view.filter(_.typeParams.nonEmpty).foldLeft(Map[String,Type]())((s, e) => tpsFor(e, e) ++ s)
+        lookingFor.ownerChain.view.filter(_.typeParams.nonEmpty).foldLeft(Map[String, Type]())((s, e) ⇒ tpsFor(e, e) ++ s)
       }
       t match {
         case s @ Select(o, _) ⇒ typeParams(o.tpe, s.symbol)
@@ -226,9 +226,13 @@ trait PuscaDefinitions {
       case a: Apply ⇒
         a.children.foldLeft(soFar)((sf, e) ⇒ handle(obj, objName, allowedImpures)(e, sf))
 
+      case a @ Assign(s @ Select(_, _), _) if s.symbol.isModuleVar ⇒ //implementation detail of object (assigns a xxx$module var)
+        soFar
       case a @ Assign(lhs, rhs) if (!lhs.symbol.ownerChain.contains(obj)) ⇒ // assign to var outside the scope of this method
         Error(a.pos, "write to non-local var " + lhs.symbol.name + " inside the pure " + objName) :: soFar
 
+      case s: Select if s.symbol.isModuleVar ⇒ //implementation detail of object (reads a xxx$module var)
+        soFar
       case s: Select if violatesPurity(s, allowedImpures) ⇒ //this probably only happens when called in the typer phase
         val msg = s.symbol match {
           case s if s.isGetter      ⇒ "access to non-local var " + s.name + " inside the pure " + objName
