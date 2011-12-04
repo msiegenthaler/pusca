@@ -11,6 +11,7 @@ class PurePlugin(val global: Global) extends Plugin {
   val description = "Enforces pureness"
   val components = List[PluginComponent]( //
     //ShowTreeComponent, //
+    new RemovePuscaFunctionsComponent(global),
     new PurityCheckerComponent(global),
     new ConstructorOverrideComponent(global),
     new MarkMethodReturnPathComponent(global),
