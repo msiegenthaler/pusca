@@ -25,13 +25,21 @@ class impure extends PurenessAnnotation
  * <code>
  * 	trait Example[A] {
  * 		@impureIf('B)
- * 		def do[B](f: A => B): String = {...}
+ * 		def do[B](f: A => B): String = ???
  * 		@impureIf('A)
- * 		def stuff(f: () => A): String = {...}
+ * 		def stuff(f: () => A): String = ???
  *  }
  * </code> 
  */
 class impureIf(params: Symbol*) extends PurenessAnnotation
+
+/**
+ * Requires a type parameter to be pure (cannot be @sideEffect).
+ * <code>
+ * 	def hi[A](f: String => A): Unit = ???
+ * </code>
+ */
+class requirePure(params: Symbol*) extends PurenessAnnotation
 
 /**
  * Applicable on types that are used as return type to express the along with the type a side effect is caused
