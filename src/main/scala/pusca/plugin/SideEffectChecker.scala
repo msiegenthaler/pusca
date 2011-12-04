@@ -52,6 +52,7 @@ abstract class SideEffectChecker extends PuscaDefinitions {
     override def canAdaptAnnotations(tree: Tree, mode: Int, pt: Type): Boolean = {
       //println("# canAdapt  tree=" + tree + "  mode=" + analyzer.modeString(mode) + "  pt=" + pt + "  class=" + tree.getClass)
       if ((mode & analyzer.EXPRmode) == 0 || (mode & analyzer.LHSmode) != 0) false
+      else if (phase.name == "tailcalls") false //don't do anything in the tailcall phase
       else tree match {
         case a @ ApplySideEffect(_)            ⇒ false
         case a @ MarkReturnValue(_, _)         ⇒ true
