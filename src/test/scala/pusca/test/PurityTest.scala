@@ -177,4 +177,86 @@ class PurityTest extends JUnitSuite with ShouldMatchersForJUnit {
     	  }
       """) should compile
   }
+
+  @Test def objectDef {
+    code("object A {}") should compile
+  }
+
+  @Test def objectDefWithImpureMethod {
+    code("""
+        object A {
+        	@impure def x = "Ho"
+        }
+        """) should compile
+  }
+
+  @Test def objectDefExtendingTrait {
+    code("""
+        trait A {
+    			@impure def x = "Ho"
+    		}
+        object B extends A{
+        }
+        """) should compile
+  }
+
+  @Test def objectDefInsideTrait {
+    code("""
+        trait Outer {
+    			@impure def x = "Ho"
+        	object A {
+        		def y = x
+        	}
+    		}
+        """) should compile
+  }
+  @Test def objectDefExtendingTraitInsideTrait {
+    code("""
+        trait Outer {
+        	protected trait A
+        	object P extends A { }
+    		}
+        """) should compile
+  }
+  @Test def objectDefInsideAbstractClass {
+    code("""
+        abstract class Outer {
+        	object A { }
+    		}
+        """) should compile
+  }
+  @Test def objectDefInsideClass {
+    code("""
+        abstract class Outer {
+        	object A { }
+    		}
+        """) should compile
+  }
+
+  @Test def objectWithSomeTraitsAndAnAbstractClass {
+    code("""
+        trait A[B]
+        trait AI {
+        	protected trait A2[B] extends A[B] { }
+    		}
+        abstract class Outer {
+        	private object X extends AI { }
+    		}
+        """) should compile
+  }
+  
+  @Test def declarePureOnImpure {
+    code("""
+        @impure def ip = "Bla"
+        @declarePure def dp = ip
+        @pure def p = dp
+        """) should compile
+  }
+  @Test def declarePureOnImpure2 {
+    code("""
+        @impure def ip = "Bla"
+        @declarePure def dp: String = ip
+        @pure def p = dp
+        """) should compile
+  }
 }

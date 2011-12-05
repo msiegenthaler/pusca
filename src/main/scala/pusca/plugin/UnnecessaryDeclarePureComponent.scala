@@ -21,7 +21,7 @@ class UnnecessaryDeclarePureComponent(val global: Global) extends PluginComponen
     override def apply(unit: CompilationUnit) {
       def handle(t: Tree): Unit = {
         t match {
-          case d: DefDef if isAnnotDeclarePure(d) && PurityChecker(d).isEmpty && !hasAnnotation(d.rhs.tpe, Annotation.sideEffect) ⇒
+          case d: DefDef if isAnnotDeclarePure(d) && PurityChecker(d, true).isEmpty && !hasAnnotation(d.rhs.tpe, Annotation.sideEffect) ⇒
             reporter.warning(d.pos, "@declarePure is unnecessary, function '" + d.name + "' is pure")
 
           case _ ⇒ ()

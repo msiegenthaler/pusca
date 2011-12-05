@@ -101,6 +101,7 @@ trait PuscaDefinitions {
     sealed trait Purity
     case object AlwaysPure extends Purity
     case object AlwaysImpure extends Purity
+    case object DeclaredPure extends Purity
     case class ImpureDependingOn(tparams: Set[String]) extends Purity
 
     /**
@@ -108,11 +109,12 @@ trait PuscaDefinitions {
      * Does not take the body of the method into account, whether the body conforms to the declaration is checked elsewhere.
      */
     def purityOf(s: Symbol): Purity = s match {
-      case s if s.isSetter                          ⇒ AlwaysImpure //setter of var
-      case s if s.isGetter && !s.isStable           ⇒ AlwaysImpure //getter on var
-      case s if s.isGetter                          ⇒ AlwaysPure //  getter on val
-      case s if hasAnnotation(s, Annotation.pure)   ⇒ AlwaysPure
-      case s if hasAnnotation(s, Annotation.impure) ⇒ AlwaysImpure
+      case s if s.isSetter                               ⇒ AlwaysImpure //setter of var
+      case s if s.isGetter && !s.isStable                ⇒ AlwaysImpure //getter on var
+      case s if s.isGetter                               ⇒ AlwaysPure //  getter on val
+      case s if hasAnnotation(s, Annotation.pure)        ⇒ AlwaysPure
+      case s if hasAnnotation(s, Annotation.declarePure) ⇒ DeclaredPure
+      case s if hasAnnotation(s, Annotation.impure)      ⇒ AlwaysImpure
       case s if hasAnnotation(s, Annotation.impureIf) ⇒
         val impureIfs = s.annotations.find(_.atp.typeSymbol == Annotation.impureIf) match {
           case Some(AnnotationInfo(_, args, _)) ⇒ args.collect { case SymbolApply(arg) ⇒ arg }
@@ -181,11 +183,13 @@ trait PuscaDefinitions {
     /** checks whether an apply is pure given the list of with names of type parameters that are allowed to be impure. */
     def violatesPurity(a: Apply, allowedImpures: Set[String]): Boolean = purityOf(a.fun.symbol) match {
       case AlwaysPure            ⇒ false
+      case DeclaredPure          ⇒ false
       case AlwaysImpure          ⇒ true
       case ImpureDependingOn(di) ⇒ violates(di, allowedImpures, resolveTypeParams(a), a.pos, a.fun.symbol)
     }
     def violatesPurity(s: Select, allowedImpures: Set[String]): Boolean = purityOf(s.symbol) match {
       case AlwaysPure            ⇒ false
+      case DeclaredPure          ⇒ false
       case AlwaysImpure          ⇒ true
       case ImpureDependingOn(di) ⇒ violates(di, allowedImpures, methodOwnerTypeParams(s), s.pos, s.symbol)
     }
@@ -206,12 +210,17 @@ trait PuscaDefinitions {
 
     import Purity._
     def apply(d: DefDef): List[Error] = apply(d.symbol, "method " + d.symbol.fullName, d.rhs)
+    def apply(d: DefDef, asIfPure: Boolean = false): List[Error] = {
+      if (asIfPure) handle(d.symbol, "method " + d.symbol.fullName, Set.empty)(d.rhs)
+      else apply(d.symbol, "method " + d.symbol.fullName, d.rhs)
+    }
     def apply(c: ClassDef): List[Error] = apply(c.symbol, "class " + c.symbol.fullName, c.impl)
     def apply(f: Function): List[Error] = apply(f.symbol, "function " + f.symbol.fullName, f.body)
     def apply(obj: Symbol, objName: String, content: Tree): List[Error] = {
       purityOf(obj) match {
         case AlwaysPure                 ⇒ handle(obj, objName, Set.empty)(content)
         case AlwaysImpure               ⇒ Nil
+        case DeclaredPure               ⇒ Nil
         case ImpureDependingOn(impures) ⇒ handle(obj, objName, impures)(content)
       }
     }
@@ -234,9 +243,13 @@ trait PuscaDefinitions {
       case a: Apply ⇒
         a.children.foldLeft(soFar)((sf, e) ⇒ handle(obj, objName, allowedImpures)(e, sf))
 
+      case a @ Assign(s @ Select(_, _), _) if s.symbol.isModuleVar ⇒ //implementation detail of object (assigns a xxx$module var)
+        soFar
       case a @ Assign(lhs, rhs) if (!lhs.symbol.ownerChain.contains(obj)) ⇒ // assign to var outside the scope of this method
         Error(a.pos, "write to non-local var " + lhs.symbol.name + " inside the pure " + objName) :: soFar
 
+      case s: Select if s.symbol.isModuleVar ⇒ //implementation detail of object (reads a xxx$module var)
+        soFar
       case s: Select if violatesPurity(s, allowedImpures) ⇒ //this probably only happens when called in the typer phase
         val msg = s.symbol match {
           case s if s.isGetter      ⇒ "access to non-local var " + s.name + " inside the pure " + objName
