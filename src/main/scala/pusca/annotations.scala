@@ -1,7 +1,7 @@
 package pusca
 
 import scala.annotation.TypeConstraint
-import scala.annotation.TypeConstraint
+
 
 /** Annotation the defines the pureness of a method. The constructor is annotated on the class itself. */
 sealed class PurenessAnnotation extends StaticAnnotation
