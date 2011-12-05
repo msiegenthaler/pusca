@@ -46,9 +46,9 @@ trait PuscaDefinitions {
   def hasSideEffect(tpe: Type) = !isSideEffectFree(tpe)
   def isSideEffectFree(tpe: Type) = {
     if (tpe.typeSymbol.isTypeParameterOrSkolem) {
-      val lo = tpe.bounds.lo.underlying.dealias
-      val hi = tpe.bounds.hi.underlying.dealias
-      hasAnnotation(lo, Annotation.sef) || hasAnnotation(hi, Annotation.sef)
+      hasAnnotation(tpe.dealias, Annotation.sef) ||
+        hasAnnotation(tpe.bounds.lo.dealias, Annotation.sef) ||
+        hasAnnotation(tpe.bounds.hi.dealias, Annotation.sef)
     } else !hasAnnotation(tpe, Annotation.sideEffect)
   }
 
@@ -124,8 +124,8 @@ trait PuscaDefinitions {
       case s if s.isConstructor ⇒ purityOf(s.owner)
       case s: MethodSymbol ⇒ //impureIfImpureResult
         val rt = resultType(s)
-        if (hasSideEffect(rt)) AlwaysImpure
-        else if (rt.typeSymbol.isTypeParameterOrSkolem) ImpureDependingOn(Set(rt.typeSymbol.name.toString))
+        if (rt.typeSymbol.isTypeParameterOrSkolem) ImpureDependingOn(Set(rt.typeSymbol.name.toString))
+        else if (hasSideEffect(rt)) AlwaysImpure
         else AlwaysPure
       case _ ⇒ AlwaysPure
     }
