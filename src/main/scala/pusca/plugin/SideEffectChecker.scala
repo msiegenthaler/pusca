@@ -109,7 +109,8 @@ abstract class SideEffectChecker extends PuscaDefinitions {
       //println("# Bounds bounds=" + bounds + "   tparams" + tparams + "    " + targs)
       bounds.zip(targs).map { e ⇒
         val (bound, targ) = e
-        if (hasSideEffect(targ)) TypeBounds(withSideEffect(bound.lo), withSideEffect(bound.hi))
+        def boundsWithSef = bound.lo.dealias.hasAnnotation(Annotation.sef) || bound.hi.dealias.hasAnnotation(Annotation.sef)
+        if (hasSideEffect(targ) && !boundsWithSef) TypeBounds(withSideEffect(bound.lo), withSideEffect(bound.hi))
         else bound
       }
     }

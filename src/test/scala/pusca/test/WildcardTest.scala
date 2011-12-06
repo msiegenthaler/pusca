@@ -17,7 +17,7 @@ class Wildcard extends JUnitSuite with ShouldMatchersForJUnit {
     code("@pure def x[A](f: () => Pure[A]) = f()") should compile
   }
   @Test def evaluationToPureIsPureWithPureFunction {
-    code("@pure def x[A](f: () -> A) = f()") should compile
+    code("@pure def x[A](f: Unit -> A) = f()") should compile
   }
   @Test def evaluationToPureIsPureWithPureFunction2 {
     code("@pure def x[A](f: PureFunction[Unit,A]) = f()") should compile
@@ -81,6 +81,20 @@ class Wildcard extends JUnitSuite with ShouldMatchersForJUnit {
   			@pure def x[A <: Pure[Int]](f: String => A): Int = f("Hello")
   			@impure def len(x: String) = x.length
   			@pure def p = x[Int @sideEffect](len)
+  		""") should yieldCompileError("type arguments [Int @pusca.sideEffect] do not conform to method x's type parameter bounds [A <: Int @pusca.sef]")
+  }
+  @Test def funWithPureReturnTypeDoesNotAllowImpureFunction3 {
+    code("""
+  			@pure def x[A](f: String -> A): Int = f("Hello")
+  			@impure def len(x: String) = x.length
+  			@pure def p = x[Int @sideEffect](len)
+  		""") should yieldCompileError("type mismatch")
+  }
+  @Test def funWithPureReturnTypeDoesNotAllowImpureFunction4 {
+    code("""
+  			@pure def x[A](f: String => Pure[A]): Int = f("Hello")
+  			@impure def len(x: String) = x.length
+  			@pure def p = x[Int @sideEffect](len)
   		""") should yieldCompileError("type mismatch")
   }
 
@@ -112,7 +126,7 @@ class Wildcard extends JUnitSuite with ShouldMatchersForJUnit {
   			class A[X <: Pure[Int]](val f: String => X) {}
   			@impure def len(a: String) = 10
   			@pure def p = new A[Int @sideEffect](len)
-  		""") should yieldCompileError("type mismatch")
+  		""") should yieldCompileError("type arguments [Int @pusca.sideEffect] do not conform to class A's type parameter bounds [X <: Int @pusca.sef]")
   }
 
   @Test def cannotAssignSideEffectFunToPureFun {
