@@ -124,8 +124,10 @@ trait PuscaDefinitions {
       case s if s.isConstructor ⇒ purityOf(s.owner)
       case s: MethodSymbol ⇒ //impureIfImpureResult
         val rt = resultType(s)
-        if (rt.typeSymbol.isTypeParameterOrSkolem) ImpureDependingOn(Set(rt.typeSymbol.name.toString))
-        else if (hasSideEffect(rt)) AlwaysImpure
+        if (rt.typeSymbol.isTypeParameterOrSkolem) {
+          if (rt.hasAnnotation(Annotation.sideEffect)) AlwaysImpure
+          else ImpureDependingOn(Set(rt.typeSymbol.name.toString))
+        } else if (hasSideEffect(rt)) AlwaysImpure
         else AlwaysPure
       case _ ⇒ AlwaysPure
     }
