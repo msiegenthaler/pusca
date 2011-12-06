@@ -54,9 +54,33 @@ object PluginTester {
   val compile = new CompilesMatcher
 }
 
-private object PluginInterpreter {
+private object InterpreterPool {
+  private var pool = List.empty[PluginInterpreter]
+
+  def withInterpreter[A](f: PluginInterpreter ⇒ A) = {
+    val interpreter = InterpreterPool.get
+    try { f(interpreter) } finally { giveBack(interpreter) }
+  }
+
+  private def get = synchronized {
+    pool match {
+      case i :: np ⇒
+        pool = np
+        i
+      case Nil ⇒
+        new PluginInterpreter
+    }
+  }
+  private def giveBack(i: PluginInterpreter) = synchronized {
+    pool = i :: pool
+  }
+  def empty = synchronized {
+    pool = Nil
+  }
+}
+private class PluginInterpreter {
   lazy val (interpreter, out) = createInterpreter
-  
+
   def reset = {
     interpreter.reset
     out.getBuffer.setLength(0)
@@ -160,11 +184,11 @@ class PluginTester {
     doRead("")
   }
 
-  def run = PluginInterpreter synchronized {
-    PluginInterpreter.reset
-    val main = PluginInterpreter.interpreter
-    val out = PluginInterpreter.out
-    
+  def run = InterpreterPool.withInterpreter { interpreter ⇒
+    interpreter.reset
+    val main = interpreter.interpreter
+    val out = interpreter.out
+
     try {
       val cs = code.reverse.map(_ + "\n()").map(main.interpret).filterNot(_ == Results.Success).map(_.toString)
 
