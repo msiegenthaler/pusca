@@ -131,10 +131,8 @@ class PluginTester {
     file.deleteOnExit
     file
   }
-
-  def run = {
-    val out = new StringWriter
-    try {
+  
+  def interpreter(out: PrintWriter) = {
       val s = new Settings()
       s.usejavacp.value = false
       s.require.appendToValue("pure")
@@ -147,7 +145,13 @@ class PluginTester {
       //plugin classes must be inside a jar
       s.plugin.appendToValue(pluginJar.getAbsoluteFile.toString)
 
-      val main = new IMain(s, new PrintWriter(out))
+      new IMain(s, out)
+  }
+
+  def run = {
+    val out = new StringWriter
+    try {
+      val main = interpreter(new PrintWriter(out))
 
       val cs = code.reverse.map(_ + "\n()").map(main.interpret).filterNot(_ == Results.Success).map(_.toString)
 
