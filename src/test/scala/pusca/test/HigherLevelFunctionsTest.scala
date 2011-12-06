@@ -161,7 +161,7 @@ class HigherLevelFunctionsTest extends JUnitSuite with ShouldMatchersForJUnit {
         @impure def il(i: Int) = i + i
   	    class LengthFunI extends Function1[String,Int @sideEffect] { override def apply(s: String) = il(s.length) }
   			@pure def x = m(new LengthFunI)
-  		""") should yieldCompileError("no type parameters for method m")
+  		""") should yieldCompileError("type mismatch")
   }
   @Test def functionWithTypeParameterIncludesPurenessOnImpureWithClass4 {
     code("""
@@ -172,7 +172,7 @@ class HigherLevelFunctionsTest extends JUnitSuite with ShouldMatchersForJUnit {
   	    	m(new LengthFunI)
   	    	"Huhu"
   			}
-  		""") should yieldCompileError("no type parameters for method m")
+  		""") should yieldCompileError("type mismatch")
   }
 
   @Test def functionWithTypeParameterCalledFromImpureWithImpure {
