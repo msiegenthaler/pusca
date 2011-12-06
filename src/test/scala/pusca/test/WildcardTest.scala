@@ -5,7 +5,7 @@ import org.scalatest.junit.ShouldMatchersForJUnit
 import org.junit.Test
 import PluginTester._
 
-class Wildcard extends JUnitSuite with ShouldMatchersForJUnit {
+class WildcardTest extends JUnitSuite with ShouldMatchersForJUnit {
   @Test def purePreservesType {
     code("@impure def x[A <: Pure[String]](f: () => A): String = f()") should compile
   }
