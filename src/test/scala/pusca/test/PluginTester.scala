@@ -54,46 +54,35 @@ object PluginTester {
   val compile = new CompilesMatcher
 }
 
-class PluginTester {
-  val code: List[String] = "import pusca._" :: Nil
-
-  def fromClasspath(n: String) = {
-    val is = classOf[PluginTester].getResourceAsStream(n)
-    if (is == null) throw new IOException("Classpath ressource " + n + " not found")
-    val c = read(is)
-    val cs = c :: code
-    new PluginTester { override val code = cs }
+private object PluginInterpreter {
+  lazy val (interpreter, out) = createInterpreter
+  
+  def reset = {
+    interpreter.reset
+    out.getBuffer.setLength(0)
   }
 
-  def fromString(s: String) = {
-    val cs = s :: code
-    new PluginTester { override val code = cs }
-  }
+  private def createInterpreter = {
+    val s = new Settings()
+    s.usejavacp.value = false
+    s.require.appendToValue("pure")
 
-  private def read(is: java.io.InputStream) = {
-    val r = new InputStreamReader(is)
-    @tailrec def doRead(soFar: String): String = {
-      val ca = new Array[Char](100)
-      val c = r.read(ca)
-      if (c != -1) {
-        val s = new String(ca, 0, c)
-        doRead(soFar + s)
-      } else soFar
-    }
-    doRead("")
-  }
+    s.classpath.value = ""
+    s.classpath.append(jarForClass(classOf[List[_]])) //library
+    s.classpath.append(jarForClass(classOf[IMain])) //compiler
+    s.classpath.append(jarForClass(classOf[PurePlugin]))
 
-  private def jarForClass(a: Class[_]) = {
-    val classFile = "/" + a.getName.replace(".", "/") + ".class"
-    val res = getClass.getResource(classFile).toString
-    val r = if (res.startsWith("file:")) res.drop("file:".length).dropRight(classFile.length)
-    else if (res.startsWith("jar:")) res.drop("jar:file:".length).dropRight(classFile.length() + 1)
-    else throw new RuntimeException("Cannot find path for " + res)
-    r
+    //plugin classes must be inside a jar
+    val pluginJar = createPluginJar
+    s.plugin.appendToValue(pluginJar.getAbsoluteFile.toString)
+
+    val out = new StringWriter
+    val main = new IMain(s, new PrintWriter(out))
+    (main, out)
   }
 
   //the jar with all the plugin classes inside.
-  lazy val pluginJar = {
+  private def createPluginJar = {
     import java.util.jar._
     import java.io._
     val file = File.createTempFile("archive", ".jar")
@@ -131,28 +120,52 @@ class PluginTester {
     file.deleteOnExit
     file
   }
-  
-  def interpreter(out: PrintWriter) = {
-      val s = new Settings()
-      s.usejavacp.value = false
-      s.require.appendToValue("pure")
 
-      s.classpath.value = ""
-      s.classpath.append(jarForClass(classOf[List[_]])) //library
-      s.classpath.append(jarForClass(classOf[IMain])) //compiler
-      s.classpath.append(jarForClass(classOf[PurePlugin]))
+  private def jarForClass(a: Class[_]) = {
+    val classFile = "/" + a.getName.replace(".", "/") + ".class"
+    val res = getClass.getResource(classFile).toString
+    val r = if (res.startsWith("file:")) res.drop("file:".length).dropRight(classFile.length)
+    else if (res.startsWith("jar:")) res.drop("jar:file:".length).dropRight(classFile.length() + 1)
+    else throw new RuntimeException("Cannot find path for " + res)
+    r
+  }
+}
 
-      //plugin classes must be inside a jar
-      s.plugin.appendToValue(pluginJar.getAbsoluteFile.toString)
+class PluginTester {
+  val code: List[String] = "import pusca._" :: Nil
 
-      new IMain(s, out)
+  def fromClasspath(n: String) = {
+    val is = classOf[PluginTester].getResourceAsStream(n)
+    if (is == null) throw new IOException("Classpath ressource " + n + " not found")
+    val c = read(is)
+    val cs = c :: code
+    new PluginTester { override val code = cs }
   }
 
-  def run = {
-    val out = new StringWriter
-    try {
-      val main = interpreter(new PrintWriter(out))
+  def fromString(s: String) = {
+    val cs = s :: code
+    new PluginTester { override val code = cs }
+  }
 
+  private def read(is: java.io.InputStream) = {
+    val r = new InputStreamReader(is)
+    @tailrec def doRead(soFar: String): String = {
+      val ca = new Array[Char](100)
+      val c = r.read(ca)
+      if (c != -1) {
+        val s = new String(ca, 0, c)
+        doRead(soFar + s)
+      } else soFar
+    }
+    doRead("")
+  }
+
+  def run = PluginInterpreter synchronized {
+    PluginInterpreter.reset
+    val main = PluginInterpreter.interpreter
+    val out = PluginInterpreter.out
+    
+    try {
       val cs = code.reverse.map(_ + "\n()").map(main.interpret).filterNot(_ == Results.Success).map(_.toString)
 
       val outLines = out.toString.split("\n").toList.map { s ⇒ s.dropRight(s.reverse.takeWhile(_ == '\n').length) }
