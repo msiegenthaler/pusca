@@ -47,9 +47,17 @@ class MethodReturnTypeAnnotatorComponent(val global: Global) extends PluginCompo
         val ndef = treeCopy.DefDef(d, nmods, d.name, d.tparams, d.vparamss, d.tpt, d.rhs)
         super.transform(ndef)
 
-      case c: ClassDef ⇒
-        impureClass = hasAnnotation(c, Annotation.impure)
-        //TODO annotate all classes without an annotation with @pure
+      case c: ClassDef if hasAnnotation(c, Annotation.impure) ⇒
+        impureClass = true
+        super.transform(c)
+      case c: ClassDef if hasAnnotation(c, Annotation.pure) ⇒
+        impureClass = false
+        super.transform(c)
+      case c: ClassDef ⇒ //annotate with @pure
+        val annot = makeAnnotation(Annotation.pure)
+        val nmods = c.mods.withAnnotations(annot :: c.mods.annotations)
+        val nc = treeCopy.ClassDef(c, nmods, c.name, c.tparams, c.impl)
+        impureClass = false
         super.transform(c)
 
       case other ⇒

@@ -18,7 +18,7 @@ class PurityDefinitionTest extends JUnitSuite with ShouldMatchersForJUnit {
     new PluginTester().fromString(definition).fromString(a).fromString(b).run should
       yieldCompileError("impure method call to " + n + " inside the pure method checker")
   }
-  
+
   @Test def pureAndImpure {
     code("@pure @impure def a = 10") should yieldCompileError("method a has multiple purity annotations")
   }
@@ -37,22 +37,22 @@ class PurityDefinitionTest extends JUnitSuite with ShouldMatchersForJUnit {
   @Test def impureIfAndDeclarePure {
     code("@impureIf @declarePure def a = 10") should yieldCompileError("method a has multiple purity annotations")
   }
-  
+
   @Test def cannotUseSideEffectOnMethod {
     code("@sideEffect def a = 10") should yieldCompileError("@sideEffect does not apply to methods but only to types")
   }
-  
+
   @Test def cannotUsePureOnReturnType {
     code("def a: Int @pure = 10") should yieldCompileError("purity annotation @pure can only be used on a method, not on the return type")
   }
   @Test def cannotUseImpureOnReturnType {
-  	code("def a: Int @impure = 10") should yieldCompileError("purity annotation @impure can only be used on a method, not on the return type")
+    code("def a: Int @impure = 10") should yieldCompileError("purity annotation @impure can only be used on a method, not on the return type")
   }
   @Test def cannotUseDeclarePureOnReturnType {
-  	code("def a: Int @declarePure = 10") should yieldCompileError("purity annotation @declarePure can only be used on a method, not on the return type")
+    code("def a: Int @declarePure = 10") should yieldCompileError("purity annotation @declarePure can only be used on a method, not on the return type")
   }
   @Test def cannotUseImpureIfOnReturnType {
-  	code("def a: Int @impureIf('A) = 10") should yieldCompileError("purity annotation @impureIf can only be used on a method, not on the return type")
+    code("def a: Int @impureIf('A) = 10") should yieldCompileError("purity annotation @impureIf can only be used on a method, not on the return type")
   }
 
   @Test def defPureFunctionImplicit {
@@ -162,5 +162,18 @@ class PurityDefinitionTest extends JUnitSuite with ShouldMatchersForJUnit {
         @impure def a: Int = 10
         def b = a
         @pure def c = b""") should yieldCompileError("impure method call to b inside the pure method c")
+  }
+
+  @Test def annotMethodNoRt {
+    code("def hello = 12") should compile
+  }
+  @Test def annotMethodExplicitRt {
+    code("def hello: Int = 12") should compile
+  }
+  @Test def annotMethodExplicitParameterizedRt {
+    code("def hello[A](a: A): A = a") should compile
+  }
+  @Test def annotMethodParameterizedRt {
+    code("def hello[A](a: A) = a") should compile
   }
 }
