@@ -6,9 +6,10 @@ import scala.tools.nsc.Global
 import scala.tools.nsc.Phase
 
 /**
- * Changes the return type of methods annotated with @impure by adding @sideEffect.
+ * Changes the return type of methods annotated with @impure by adding @sideEffect and adds @impureIfReturnType to unannotated
+ * methods.
  */
-class MethodReturnTypeAnnotatorComponent(val global: Global) extends PluginComponent with Transform with PuscaDefinitions with ParserStageSupport {
+class MethodReturnTypeAnnotatorComponent(val global: Global) extends PluginComponent with Transform with ParserStageSupport {
   import global._
 
   val runsAfter = List("parser")
@@ -39,8 +40,16 @@ class MethodReturnTypeAnnotatorComponent(val global: Global) extends PluginCompo
           super.transform(ndef)
       }
 
+      case d: DefDef if !hasPuscaMethodAnnotation(d) ⇒
+        //annotate all methods without an annotation with @impureIfReturnType
+        val annot = makeAnnotation(Annotation.impureIfReturnType)
+        val nmods = d.mods.withAnnotations(annot :: d.mods.annotations)
+        val ndef = treeCopy.DefDef(d, nmods, d.name, d.tparams, d.vparamss, d.tpt, d.rhs)
+        super.transform(ndef)
+
       case c: ClassDef ⇒
         impureClass = hasAnnotation(c, Annotation.impure)
+        //TODO annotate all classes without an annotation with @pure
         super.transform(c)
 
       case other ⇒

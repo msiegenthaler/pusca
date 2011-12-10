@@ -1,7 +1,7 @@
 package pusca.plugin
 import scala.tools.nsc.Global
 
-private[plugin] trait ParserStageSupport {
+private[plugin] trait ParserStageSupport extends PuscaDefinitions {
   val global: Global
   import global._
 
@@ -11,6 +11,7 @@ private[plugin] trait ParserStageSupport {
     case _ ⇒ None
   }
   private def findAnnotation(a: Symbol, annots: List[Tree]) = annots.view.map(annotationName).flatten.find(sameName(a)).isDefined
+  private def findAnnotation(a: List[Symbol], annots: List[Tree]) = annots.view.map(annotationName).flatten.find(v ⇒ a.find(sameName(_)(v)).isDefined).isDefined
 
   protected def hasAnnotation(d: DefDef, annot: Symbol): Boolean = findAnnotation(annot, d.mods.annotations)
   protected def hasAnnotation(c: ClassDef, annot: Symbol): Boolean = findAnnotation(annot, c.mods.annotations)
@@ -19,9 +20,11 @@ private[plugin] trait ParserStageSupport {
     case Annotated(a, t) ⇒ hasAnnotation(t, annot)
     case _ ⇒ false
   }
+  protected def hasPuscaMethodAnnotation(d: DefDef) = findAnnotation(Annotation.allForMethod, d.mods.annotations)
+  protected def hasPuscaMethodAnnotation(c: ClassDef) = findAnnotation(Annotation.allForMethod, c.mods.annotations)
 
   protected def makeAnnotation(annot: Symbol): Tree = {
-    Apply(Select(New(Ident(annot.name)), mkTermName("<init>")), Nil)
+    Apply(Select(New(Select(Ident("pusca"), annot.name)), mkTermName("<init>")), Nil)
   }
   protected def annotate(t: Tree, a: Symbol): Tree = Annotated(makeAnnotation(a), t)
 

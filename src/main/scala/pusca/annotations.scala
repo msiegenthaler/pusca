@@ -2,7 +2,6 @@ package pusca
 
 import scala.annotation.TypeConstraint
 
-
 /** Annotation the defines the pureness of a method. The constructor is annotated on the class itself. */
 sealed class PurenessAnnotation extends StaticAnnotation
 
@@ -20,7 +19,7 @@ class declarePure extends PurenessAnnotation
 /** The method is declared as impure. */
 class impure extends PurenessAnnotation
 
-/** 
+/**
  * The method is impure if any of the type parameters specified is a type annotated with @sideEffect.
  * Example:
  * <code>
@@ -30,9 +29,20 @@ class impure extends PurenessAnnotation
  * 		@impureIf('A)
  * 		def stuff(f: () => A): String = {...}
  *  }
- * </code> 
+ * </code>
  */
 class impureIf(params: Symbol*) extends PurenessAnnotation
+
+/**
+ * The method is impure if its return type is a type annotated with @sideEffect. This annotation is the default
+ * and should not be specified explicitly.
+ * Example:
+ * <code>
+ * 	@impureIfReturnType def a[A,B](f: A => B): B = { ... } //equals @impureIf('B)
+ * 	def a[A,B](f: A => B): B = { ... } //same as above
+ * </code>
+ */
+class impureIfReturnType extends PurenessAnnotation
 
 /**
  * Applicable on types that are used as return type to express the along with the type a side effect is caused

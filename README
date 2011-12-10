@@ -26,7 +26,7 @@ using the @impureIf annotation:
 	@impureIf('B) def exec[B](f: () => B): Unit = f()
 The @impureIf annotation might reference any of the type parameters that can be used inside the method. If the method returns
 a parameterized type, then that type is automatically used as @impureIf if no purity annotation is used:
-	def exec[B](f: () => B): B = f()   //equals @impureIf('B)
+	def exec[B](f: () => B): B = f()   //equals @impureIf('B) and @impureIfReturnType
 
 
 A Constructor is considered a normal method, but is annotated on the class itself. The @impure and @declarePure annotations

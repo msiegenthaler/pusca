@@ -17,9 +17,10 @@ trait PuscaDefinitions {
     val pure = definitions.getClass("pusca.pure")
     val impure = definitions.getClass("pusca.impure")
     val impureIf = definitions.getClass("pusca.impureIf")
+    val impureIfReturnType = definitions.getClass("pusca.impureIfReturnType")
     val declarePure = definitions.getClass("pusca.declarePure")
 
-    val allForMethod = pure :: impure :: impureIf :: declarePure :: Nil
+    val allForMethod = pure :: impure :: impureIf :: impureIfReturnType :: declarePure :: Nil
     val allForReturn = sideEffect :: sef :: Nil
   }
 
@@ -122,14 +123,21 @@ trait PuscaDefinitions {
         }
         ImpureDependingOn(impureIfs.toSet)
       case s if s.isConstructor ⇒ purityOf(s.owner)
-      case s: MethodSymbol ⇒ //impureIfImpureResult
-        val rt = resultType(s)
-        if (rt.typeSymbol.isTypeParameterOrSkolem) {
-          if (rt.hasAnnotation(Annotation.sideEffect)) AlwaysImpure
-          else ImpureDependingOn(Set(rt.typeSymbol.name.toString))
-        } else if (hasSideEffect(rt)) AlwaysImpure
-        else AlwaysPure
+      case s: MethodSymbol if hasAnnotation(s, Annotation.impureIfReturnType) ⇒
+        purityOfType(resultType(s))
+      case s: MethodSymbol ⇒ //method that was not processed with pusca
+        //TODO have a dictionary of some common methods/packages and make all others @impure 
+        //println("! Call not pusca-compiled method " + s.owner.name + "." + s.name)
+        purityOfType(resultType(s))
       case _ ⇒ AlwaysPure
+    }
+    private def purityOfType(tpe: Type) = {
+      val s = tpe.typeSymbol
+      if (s.isTypeParameterOrSkolem) {
+        if (tpe.hasAnnotation(Annotation.sideEffect)) AlwaysImpure
+        else ImpureDependingOn(Set(s.name.toString))
+      } else if (hasSideEffect(tpe)) AlwaysImpure
+      else AlwaysPure
     }
     private def resultType(t: MethodSymbol): Type = {
       def resTpe(t: Type): Type = t match {
