@@ -58,6 +58,9 @@ class PureFunctionTest extends JUnitSuite with ShouldMatchersForJUnit {
     		import Functor._
     """
 
+	@Test def functorDef {
+		code(functorDefinition) should compile
+	}
   @Test def functorWithAnon {
     code(functorDefinition + """
         @pure def x {
@@ -86,4 +89,69 @@ class PureFunctionTest extends JUnitSuite with ShouldMatchersForJUnit {
     		}
         """) should yieldCompileError("polymorphic expression cannot be instantiated to expected type")
   }
+
+  //simplified non-functional implementation of an iteratee
+  val iterateeDefinition = """
+        sealed trait Input[+A]
+        case class Data[A](data: A) extends Input[A]
+        case object EOF extends Input[Nothing]
+        
+        sealed trait Iteratee[-A,+B] {
+        	def isDone: Boolean
+        	def isData = !isDone
+        	def value: Option[B]
+        }
+        case class Cont[A,B](f: Input[A] -> Iteratee[A,B], value: Option[B]) extends Iteratee[A,B] {
+        	override def isDone = false
+    			def apply(in: Input[A]): Iteratee[A,B] = f(in)
+    		}
+        case class Done[B](value: Option[B]) extends Iteratee[Any,B] {
+    			override def isDone = true
+    		}
+    		def mapping[A, B](f: A -> B): Iteratee[A, B] = {
+    			def handle(in: Input[A]): Iteratee[A,B] = in match {
+    				case Data(d) => Cont(handle, Some(f(d)))
+    				case EOF     => Done(None)
+    			}
+        	Cont(handle, None)
+    		}
+    """
+
+  @Test def iterateeDef {
+    code(iterateeDefinition) should compile
+
+  }
+
+  @Test def iterateeUnitAnonFunction {
+    code(iterateeDefinition + """
+  			def unit[A] = mapping(a => a)
+  	""") should compile
+  }
+  @Test def iterateeUnitAnonFunction2 {
+    code(iterateeDefinition + """
+        def unit[A]: Iteratee[A,A] = mapping(a => a)
+        """) should compile
+  }
+  @Test def iterateeUnitAnonFunctionWithParameterType {
+    code(iterateeDefinition + """
+        def unit[A]: Iteratee[A,A] = mapping((a: A) => a)
+        """) should compile
+  }
+  @Test def iterateeUnitWithInnerPureFunction {
+    code(iterateeDefinition + """
+        def unit[A]: Iteratee[A,A] = {
+        	@pure def uf(v: A) = v
+        	mapping(uf)
+    		}
+        """) should compile
+  }
+  @Test def iterateeUnitWithInnerPureFunction2 {
+    code(iterateeDefinition + """
+        def unit[A]: Iteratee[A,A] = {
+        	@pure def uf(v: A): Pure[A] = v
+        	mapping(uf)
+    		}
+        """) should compile
+  }
+
 }
