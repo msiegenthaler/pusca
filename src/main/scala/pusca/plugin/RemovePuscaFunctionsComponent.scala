@@ -6,7 +6,7 @@ import scala.tools.nsc.Global
 import scala.tools.nsc.Phase
 
 /** Removes all calls to pusca functions (addSideEffect, applySideEffect) */
-class RemovePuscaFunctionsComponent(val global: Global) extends PluginComponent with Transform with PuscaDefinitions with ParserStageSupport {
+class RemovePuscaFunctionsComponent(val global: Global) extends PluginComponent with Transform with ParserStageSupport {
   import global._
 
   val runsAfter = List("typer", "purityChecker")
@@ -21,7 +21,7 @@ class RemovePuscaFunctionsComponent(val global: Global) extends PluginComponent 
         case AddSideEffect(f)   ⇒ f
         case t                  ⇒ t
       }
-      super.transform(tree)
+      super.transform(nt)
     }
   }
 }
