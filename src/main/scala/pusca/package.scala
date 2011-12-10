@@ -2,11 +2,11 @@ import scala.annotation.TypeConstraint
 
 package object pusca {
   /** The type A in a form that does not allow @sideEffect to be used on it */
-  type Pure[A] = A @sef
+  type Pure[+A] = A @sef
 
   /** Function that evaluates without a side effect. */
-  type PureFunction[V1, R] = Function1[V1, Pure[R]]
-  type ->[V1, R] = PureFunction[V1, R]
+  type PureFunction[-V1, +R] = Function1[V1, Pure[R]]
+  type ->[-V1, +R] = PureFunction[V1, R]
 
   /** removes the @sideEffect annotation */
   @inline def applySideEffect[A](a: A @sideEffect): A = a
