@@ -16,7 +16,7 @@ class MarkMethodReturnPathComponent(val global: Global) extends PluginComponent 
 
   class MarkMethodReturnPath extends Transformer {
     override def transform(tree: Tree): Tree = tree match {
-      case d @ DefDef(mods, name, tparams, vparamss, TypeTree(), rhs) if !hasAnnotation(d, Annotation.pure) ⇒
+      case d @ DefDef(mods, name, tparams, vparamss, TypeTree(), rhs) if !hasAnnotation(d, Annotation.pure) && !hasAnnotation(d, Annotation.impureIfReturnType) ⇒
         val needToAddSideEffect = hasAnnotation(d, Annotation.impure) && !hasAnnotation(d.tpt, Annotation.sideEffect)
         val nrhs = transformReturn(rhs, needToAddSideEffect)
         treeCopy.DefDef(d, mods, name, tparams, vparamss, d.tpt, nrhs)
