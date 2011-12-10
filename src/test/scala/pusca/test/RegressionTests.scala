@@ -16,6 +16,7 @@ import org.junit.runners.Suite.SuiteClasses
   classOf[ParametrizedTypesTest], //
   classOf[TailcallsTest], //
   classOf[WildcardTest], //
+  classOf[PureFunctionTest], //
   classOf[SideEffectAnnotationTest]))
 class RegressionTests {
 }
