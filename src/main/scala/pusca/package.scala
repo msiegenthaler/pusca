@@ -2,20 +2,19 @@ import scala.annotation.TypeConstraint
 
 package object pusca {
   /** The type A in a form that does not allow @sideEffect to be used on it */
-  type Pure[A] = A @sef
+  type Pure[+A] = A @sideEffectFree
+  /** The type A in a form that has a side effect */
+  type Impure[+A] = A @sideEffect
 
   /** Function that evaluates without a side effect. */
-  type PureFunction[V1, R] = Function1[V1, Pure[R]]
-  type ->[V1, R] = PureFunction[V1, R]
+  type PureFunction[-V1, +R] = Function1[V1, Pure[R]]
+  type ->[-V1, +R] = PureFunction[V1, R]
 
-  /** removes the @sideEffect annotation */
-  @inline def applySideEffect[A](a: A @sideEffect): A = a
+  /** Function that evaluates without a side effect. */
+  type ImpureFunction[-V1, +R] = Function1[V1, Impure[R]]
+  type ==>[-V1, +R] = ImpureFunction[V1, R]
 
-  /** adds an @sideEffect annotation */
-  @inline def addSideEffect[A](a: A): A @sideEffect = a
 
-  /** INTERNAL: just a marker for communication between the compiler steps */
-  def __internal__markReturnValue[A](a: A): A @__internal__returned = throw new UnsupportedOperationException
-  def __internal__markReturnValueWithSideEffect[A](a: A): A @__internal__returned @sideEffect = throw new UnsupportedOperationException
-  class __internal__returned extends StaticAnnotation with TypeConstraint
+  //TODO
+  //@inline def purify[A](a: A): A @sideEffectFree = a
 }

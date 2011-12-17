@@ -11,22 +11,29 @@ trait PuscaDefinitions {
   protected object Annotation {
     def apply(annotation: Symbol): AnnotationInfo = AnnotationInfo(annotation.tpe, Nil, Nil)
 
-    val sideEffect = definitions.getClass("pusca.sideEffect")
-    val sef = definitions.getClass("pusca.sef")
-
     val pure = definitions.getClass("pusca.pure")
     val impure = definitions.getClass("pusca.impure")
     val impureIf = definitions.getClass("pusca.impureIf")
     val impureIfReturnType = definitions.getClass("pusca.impureIfReturnType")
     val declarePure = definitions.getClass("pusca.declarePure")
 
+    val sideEffect = definitions.getClass("pusca.sideEffect")
+    val sideEffectFree = definitions.getClass("pusca.sideEffectFree")
+
+    val returnedInfere = definitions.getClass("pusca.Internal.returnedInfere")
+    val returnedSideEffect = definitions.getClass("pusca.Internal.returnedSideEffect")
+    val returnedSideEffectFree = definitions.getClass("pusca.Internal.returnedSideEffectFree")
+
     val allForMethod = pure :: impure :: impureIf :: impureIfReturnType :: declarePure :: Nil
-    val allForReturn = sideEffect :: sef :: Nil
+    val allForTypes = sideEffect :: sideEffectFree :: Nil
+    val internalForTypes = returnedInfere :: returnedSideEffect :: returnedSideEffectFree :: Nil
   }
 
+  //TODO deprecate (use tpe.hasAnnotation)
   protected def hasAnnotation(tpe: Type, a: Symbol): Boolean = {
     tpe.annotations.find(_.atp.typeSymbol == a).isDefined
   }
+  //TODO deprecate (use tpe.hasAnnotation)
   protected def hasAnnotation(tpe: Symbol, a: Symbol): Boolean = {
     tpe.annotations.find(_.atp.typeSymbol == a).isDefined
   }
@@ -36,67 +43,25 @@ trait PuscaDefinitions {
   protected def removeAnnotation(tpe: Type, a: Symbol): Type = {
     tpe.withAnnotations(tpe.annotations.filterNot(_.atp.typeSymbol == a))
   }
+  object AlwaysPureType {
+    def unapply(t: Type) = {
+      if (t.typeSymbol.isTypeParameterOrSkolem) {
+        if (t.hasAnnotation(Annotation.sideEffectFree)) Some(())
+        else None
+      } else if (t.hasAnnotation(Annotation.sideEffect)) None
+      else Some(())
+    }
+  }
 
   protected lazy val puscaPackage = definitions.getModule("pusca")
   protected lazy val packageObject = stringToTermName("package")
-  protected lazy val applySideEffectMethod = definitions.getMember(puscaPackage, "applySideEffect")
-  protected lazy val addSideEffectMethod = definitions.getMember(puscaPackage, "addSideEffect")
+  //TODO delete
   protected lazy val markReturnValueMethod = definitions.getMember(puscaPackage, "__internal__markReturnValue")
-  protected lazy val markReturnValueWithSideEffectMethod = definitions.getMember(puscaPackage, "__internal__markReturnValueWithSideEffect")
 
-  def hasSideEffect(tpe: Type) = !isSideEffectFree(tpe)
-  def isSideEffectFree(tpe: Type) = {
-    if (tpe.typeSymbol.isTypeParameterOrSkolem) {
-      hasAnnotation(tpe.dealias, Annotation.sef) ||
-        hasAnnotation(tpe.bounds.lo.dealias, Annotation.sef) ||
-        hasAnnotation(tpe.bounds.hi.dealias, Annotation.sef)
-    } else !hasAnnotation(tpe, Annotation.sideEffect)
-  }
-
-  object ApplySideEffect {
-    def unapply(t: Tree) = t match {
-      case Apply(TypeApply(Select(Select(Ident(p), pko), mn), _), arg :: Nil) if p == puscaPackage.name && pko == packageObject && mn == applySideEffectMethod.name ⇒
-        Some(arg)
-      case Apply(Select(Select(Ident(p), pko), mn), arg :: Nil) if p == puscaPackage.name && pko == packageObject && mn == applySideEffectMethod.name ⇒
-        Some(arg)
-      case _ ⇒ None
-    }
-  }
-  object AddSideEffect {
-    def unapply(t: Tree) = t match {
-      case Apply(TypeApply(Select(Select(Ident(p), pko), mn), _), arg :: Nil) if p == puscaPackage.name && pko == stringToTermName("package") && mn == addSideEffectMethod.name ⇒
-        Some(arg)
-      case _ ⇒ None
-    }
-  }
-  object MarkReturnValue {
-    def unapply(t: Tree) = t match {
-      case Apply(TypeApply(Select(Select(Ident(p), pko), mn), _), arg :: Nil) if p == puscaPackage.name && pko == packageObject && mn == markReturnValueMethod.name ⇒
-        Some(arg, false)
-      case Apply(Select(Select(Ident(p), pko), mn), arg :: Nil) if p == puscaPackage.name && pko == packageObject && mn == markReturnValueMethod.name ⇒
-        Some(arg, false)
-      case Apply(TypeApply(Select(Select(Ident(p), pko), mn), _), arg :: Nil) if p == puscaPackage.name && pko == packageObject && mn == markReturnValueWithSideEffectMethod.name ⇒
-        Some(arg, true)
-      case Apply(Select(Select(Ident(p), pko), mn), arg :: Nil) if p == puscaPackage.name && pko == packageObject && mn == markReturnValueWithSideEffectMethod.name ⇒
-        Some(arg, true)
-      case _ ⇒ None
-    }
-  }
-
-  protected def applySideEffectFun = Select(Ident(puscaPackage.name.toTermName), "applySideEffect")
-  protected def applySideEffect(v: Tree) = {
-    val a = Apply(applySideEffectFun, v :: Nil)
-    a.symbol.setFlag(SYNTHETIC)
-    a.pos = v.pos
-    a
-  }
-  protected def addSideEffectFun = Select(Ident(puscaPackage.name.toTermName), "addSideEffect")
-  protected def addSideEffect(v: Tree) = {
-    val a = Apply(addSideEffectFun, v :: Nil)
-    a.symbol.setFlag(SYNTHETIC)
-    a.pos = v.pos
-    a
-  }
+  protected sealed trait Mark
+  protected object MarkInfere extends Mark
+  protected object MarkSideEffect extends Mark
+  protected object MarkSideEffectFree extends Mark
 
   object Purity {
     sealed trait Purity
@@ -127,16 +92,22 @@ trait PuscaDefinitions {
         purityOfType(resultType(s))
       case s: MethodSymbol ⇒ //method that was not processed with pusca
         //TODO have a dictionary of some common methods/packages and make all others @impure 
-        //println("! Call not pusca-compiled method " + s.owner.name + "." + s.name)
+        //println("! Call not pusca-compiled method " + s.owner.name + "." + s.name + "  (purity = " + purityOfType(resultType(s)) + ", resultType=" + resultType(s) + ")")
         purityOfType(resultType(s))
       case _ ⇒ AlwaysPure
     }
     private def purityOfType(tpe: Type) = {
       val s = tpe.typeSymbol
+      //TODO
+      //AlwaysPure
       if (s.isTypeParameterOrSkolem) {
-        if (tpe.hasAnnotation(Annotation.sideEffect)) AlwaysImpure
-        else ImpureDependingOn(Set(s.name.toString))
-      } else if (hasSideEffect(tpe)) AlwaysImpure
+        //        println("purityOfType   " + tpe + "   " + s)
+        //        println("@@@  parents = " + tpe.parents)
+        //        println("@@@  owner = " + s.owner)
+        //        println("@@@  underlying = " + tpe.underlying)
+        //        println("@@@  dealias = " + tpe.dealias)
+        ImpureDependingOn(Set(s.name.toString))
+      } else if (hasAnnotation(tpe, Annotation.sideEffect)) AlwaysImpure
       else AlwaysPure
     }
     private def resultType(t: MethodSymbol): Type = {
@@ -208,7 +179,26 @@ trait PuscaDefinitions {
 
       val tparams = tp.filter(e ⇒ di.contains(e._1))
       di.filterNot(tparams.contains).foreach { p ⇒ reporter.error(pos, "unresolved type parameter " + p + " on call to " + f.fullName) }
-      val ips = tparams.filter(e ⇒ hasSideEffect(e._2) && !isAllowedImpure(e._2))
+      //val ips = tparams.filter(e ⇒ hasSideEffect(e._2) && !isAllowedImpure(e._2))
+      //TODO
+      println("#tparams   " + tparams)
+      //      tparams.foreach { tp ⇒
+      //        val t = tp._2
+      //        val s = t.typeSymbol
+      //        println(" tp" + t)
+      //        println("    da=" + t.dealias)
+      //        println("    ud=" + t.underlying)
+      //        println("    pa=" + t.parents)
+      //        println("    ts=" + s)
+      //        println("    oc=" + s.ownerChain)
+      //      }
+
+      //      val ips = tparams.filter(e ⇒ !isAllowedImpure(e._2))
+      def sideEffectFreeParam(t: Type) = t.typeSymbol.isTypeParameterOrSkolem && hasAnnotation(t, Annotation.sideEffectFree)
+      def sideEffectFreeValue(t: Type) = !t.typeSymbol.isTypeParameterOrSkolem && !hasAnnotation(t, Annotation.sideEffect)
+
+      val ips = tparams.filterNot(e ⇒ isAllowedImpure(e._2) || sideEffectFreeParam(e._2) || sideEffectFreeValue(e._2))
+      println("   ips = " + ips)
       ips.nonEmpty
     }
   }
@@ -236,8 +226,6 @@ trait PuscaDefinitions {
     }
 
     private[this] def handle(obj: Symbol, objName: String, allowedImpures: Set[String])(t: Tree, soFar: List[Error] = Nil): List[Error] = t match {
-      case ApplySideEffect(a) ⇒
-        handle(obj, objName, allowedImpures)(a, soFar)
       case a: Apply if violatesPurity(a, allowedImpures) ⇒
         val msg = a.fun.symbol match {
           case s if s.isSetter      ⇒ "write to non-local var " + s.name.toString.dropRight(4) + " inside the pure " + objName

@@ -18,50 +18,98 @@ class MethodReturnTypeAnnotatorComponent(val global: Global) extends PluginCompo
   def newTransformer(unit: CompilationUnit) = new MethodReturnTypeAnnotator
 
   class MethodReturnTypeAnnotator extends Transformer {
-    protected def addSideEffectFun = Select(Ident("pusca"), "addSideEffect")
-    protected def addSideEffect(v: Tree) = {
-      val a = Apply(addSideEffectFun, v :: Nil)
-      a.pos = v.pos
-      a
-    }
-
-    private var impureClass: Boolean = false
     override def transform(tree: Tree): Tree = tree match {
-      case d: DefDef if isConstructor(d) && !hasAnnotation(d.tpt, Annotation.sideEffect) && impureClass ⇒
+      case d: DefDef if !hasPuscaMethodAnnotation(d) ⇒
+        //annotate all methods without an annotation with @impureIfReturnType
+        val nmods = d.mods.withAnnotations(makeAnnotation(Annotation.impureIfReturnType) :: d.mods.annotations)
+        val ndef = treeCopy.DefDef(d, nmods, d.name, d.tparams, d.vparamss, d.tpt, d.rhs)
+        transform(ndef) //process again
+
+      //TODO handle constructors
+
+      //return type is inferred
+      case d @ DefDef(_, _, _, _, TypeTree(), rhs) ⇒ //no return type declared, so mark the return path
+        val m = d match {
+          case d: DefDef if hasAnnotation(d, Annotation.pure) ⇒ MarkSideEffectFree
+          case d: DefDef if hasAnnotation(d, Annotation.impure) ⇒ MarkSideEffect
+          case _ ⇒ MarkInfere
+        }
+        val nrhs = MarkerFun(m)(rhs)
+        val ndef = treeCopy.DefDef(d, d.mods, d.name, d.tparams, d.vparamss, TypeTree(), d.rhs)
+        super.transform(ndef)
+
+      //annotate the return type with @sideEffect or @sideEffectFree
+      case d: DefDef if hasAnnotation(d, Annotation.impureIf) ⇒
+        //TODO transform to impureIfReturnType, if the names match
+        super.transform(d)
+      case d: DefDef if hasAnnotation(d, Annotation.impureIfReturnType) ⇒
+        //TODO
+        super.transform(d)
+      case d: DefDef if hasAnnotation(d, Annotation.impure) && !hasAnnotation(d.tpt, Annotation.sideEffect) ⇒
         val ntpt = annotate(d.tpt, Annotation.sideEffect)
         val ndef = treeCopy.DefDef(d, d.mods, d.name, d.tparams, d.vparamss, ntpt, d.rhs)
         super.transform(ndef)
-      case d @ DefDef(_, _, _, _, tpt, rhs) if hasAnnotation(d, Annotation.impure) && !hasAnnotation(d.tpt, Annotation.sideEffect) ⇒ tpt match {
-        case TypeTree() ⇒ //unspecified return type, is handled in markMethodReturnPath phase
-          super.transform(d)
-        case tpt ⇒
-          val ntpt = annotate(d.tpt, Annotation.sideEffect)
-          val ndef = treeCopy.DefDef(d, d.mods, d.name, d.tparams, d.vparamss, ntpt, d.rhs)
-          super.transform(ndef)
-      }
-
-      case d: DefDef if !hasPuscaMethodAnnotation(d) ⇒
-        //annotate all methods without an annotation with @impureIfReturnType
-        val annot = makeAnnotation(Annotation.impureIfReturnType)
-        val nmods = d.mods.withAnnotations(annot :: d.mods.annotations)
-        val ndef = treeCopy.DefDef(d, nmods, d.name, d.tparams, d.vparamss, d.tpt, d.rhs)
+      case d: DefDef if hasAnnotation(d, Annotation.pure) && !hasAnnotation(d.tpt, Annotation.sideEffectFree) ⇒
+        val ntpt = annotate(d.tpt, Annotation.sideEffectFree)
+        val ndef = treeCopy.DefDef(d, d.mods, d.name, d.tparams, d.vparamss, ntpt, d.rhs)
         super.transform(ndef)
 
-      case c: ClassDef if hasAnnotation(c, Annotation.impure) ⇒
-        impureClass = true
-        super.transform(c)
-      case c: ClassDef if hasAnnotation(c, Annotation.pure) ⇒
-        impureClass = false
-        super.transform(c)
-      case c: ClassDef ⇒ //annotate with @pure
-        val annot = makeAnnotation(Annotation.pure)
-        val nmods = c.mods.withAnnotations(annot :: c.mods.annotations)
-        val nc = treeCopy.ClassDef(c, nmods, c.name, c.tparams, c.impl)
-        impureClass = false
-        super.transform(c)
+      //annotate the return values of anon functions with infere
+      case f @ Function(vp, body) ⇒
+        val nb = MarkerFun(MarkInfere)(f.body)
+        val nf = treeCopy.Function(f, vp, nb)
+        super.transform(nf)
+
+      //TODO also handle conflicts? @pure def a: Int @sideEffect
+
+      //TODO check for the annotations in different places than type parameters and method returns and error them.
 
       case other ⇒
         super.transform(tree)
     }
+
+    object MarkerFun {
+      private[this] def markFun(name: String) = Select(Select(Ident("pusca"), "Internal"), name)
+      private def markInfere = markFun("markInfere")
+      private def markSideEffect = markFun("markSideEffect")
+      private def markSideEffectFree = markFun("markSideEffectFree")
+      private def markFunFor(mark: Mark) = mark match {
+        case MarkInfere         ⇒ markInfere
+        case MarkSideEffect     ⇒ markSideEffect
+        case MarkSideEffectFree ⇒ markSideEffectFree
+      }
+
+      def apply(mark: Mark)(fun: Tree): Tree = {
+        val a = Apply(markFunFor(mark), fun :: Nil)
+        a.pos = fun.pos
+        a
+      }
+    }
+    /*
+    def transformReturn(tree: Tree, mark: Mark): Tree = {
+      tree match {
+        case a: Apply   ⇒ mark(a, m)
+        case i: Ident   ⇒ mark(i, se)
+        case s: Select  ⇒ mark(s, se)
+        case l: Literal ⇒ mark(l, se)
+
+        case b @ Block(stmts, expr) ⇒
+          val ne = transformReturn(expr, se)
+          treeCopy.Block(b, stmts, ne)
+        case i @ If(c, t, e) ⇒
+          treeCopy.If(i, c, transformReturn(t, se), transformReturn(e, se))
+        case m @ Match(sel, cases) ⇒
+          val nc = cases.map(transformReturn(_, se).asInstanceOf[CaseDef])
+          treeCopy.Match(m, sel, nc)
+        case t @ Try(b, cs, f) ⇒
+          val ncs = cs.map(transformReturn(_, se).asInstanceOf[CaseDef])
+          treeCopy.Try(t, transformReturn(b, se), ncs, f)
+        case c @ CaseDef(p, g, expr) ⇒
+          treeCopy.CaseDef(c, p, g, transformReturn(expr, se))
+
+        case other ⇒ super.transform(other)
+      }
+    }
+    */
   }
 }

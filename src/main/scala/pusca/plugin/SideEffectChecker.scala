@@ -7,25 +7,76 @@ import scala.tools.nsc.symtab.Flags._
 abstract class SideEffectChecker extends PuscaDefinitions {
   val global: Global
   import global._
+  import definitions._
 
   object checker extends AnnotationChecker {
-    private def withSideEffect(tpe: Type) = annotateWith(tpe, Annotation.sideEffect)
+    //TODO move to PuscaDefinition
+    /** A side-effect free type */
+    object SideEffectFreeType {
+      def unapply(t: Type) = {
+        if (t.dealias.hasAnnotation(Annotation.sideEffectFree)) Some(t)
+        else None
+      }
+    }
+    /** A type with side effect */
+    object SideEffectType {
+      def unapply(t: Type) = {
+        if (t.dealias.hasAnnotation(Annotation.sideEffect)) Some(t)
+        else None
+      }
+    }
+    /** A type with neither @sideEffect and @sideEffectFree */
+    object UnspecifiedSideEffectType {
+      def unapply(t: Type) = {
+        if (!t.dealias.hasAnnotation(Annotation.sideEffect) && !t.dealias.hasAnnotation(Annotation.sideEffectFree)) Some(t)
+        else None
+      }
+    }
+    /** A type on the return path, that has been marked by MethodReturnTypeAnnotatorComponent */
+    object MarkReturnType {
+      def unapply(t: Type) = t match {
+        case t if t.hasAnnotation(Annotation.returnedInfere) ⇒ Some(MarkInfere)
+        case t if t.hasAnnotation(Annotation.returnedSideEffect) ⇒ Some(MarkSideEffect)
+        case t if t.hasAnnotation(Annotation.returnedSideEffectFree) ⇒ Some(MarkSideEffectFree)
+        case _ ⇒ None
+      }
+    }
 
     def annotationsConform(tpe1: Type, tpe2: Type): Boolean = {
-      //println("# annotations " + tpe1 + " conforms to " + tpe2 + ": " + (hasSideEffect(tpe2) || !hasSideEffect(tpe1)))
-      hasSideEffect(tpe2) || !hasSideEffect(tpe1)
+      // Example:
+      //   val a: <tpe1>
+      //   val b: <tpe2> = a
+      println("# annotations " + tpe1 + " conforms to " + tpe2)
+      val r = tpe2 match {
+        case SideEffectFreeType(_) ⇒ tpe1 match {
+          case SideEffectFreeType(_)              ⇒ true
+          case MarkReturnType(MarkSideEffectFree) ⇒ true
+          case MarkReturnType(MarkInfere)         ⇒ true
+          case t if t.typeSymbol == NothingClass  ⇒ true //'Nothing' is sideEffectFree, because otherwise it's not ground
+          case _                                  ⇒ false
+        }
+        case _ ⇒ true
+      }
+      println("      conform = " + r)
+      r
     }
 
     override def annotationsGlb(tp: Type, ts: List[Type]): Type = {
       //println("# Glb tp=" + tp + "    ts=" + ts)
+      //TODO implement
       tp
     }
 
     override def annotationsLub(tp: Type, ts: List[Type]): Type = {
       //println("# Lub tp=" + tp + "    ts=" + ts)
-      if (ts.find(hasSideEffect).isDefined && !hasSideEffect(tp))
-        annotateWith(tp, Annotation.sideEffect)
-      else tp
+      //TODO implement
+      tp
+    }
+
+    override def adaptBoundsToAnnotations(bounds: List[TypeBounds], tparams: List[Symbol], targs: List[Type]): List[TypeBounds] = {
+      //println("# Bounds bounds=" + bounds + "   tparams" + tparams + "    " + targs)
+      //TODO implement
+      bounds
     }
 
     override def addAnnotations(tree: Tree, tpe: Type): Type = {
@@ -33,86 +84,58 @@ abstract class SideEffectChecker extends PuscaDefinitions {
       tree match {
         case f @ Function(vparams, body) if PurityChecker(f).nonEmpty ⇒
           //impure function, so annotate the return type
+          println("rrA =" + tpe + "      " + tpe.resultType)
           tpe match {
             case r: TypeRef ⇒
-              val (h, t :: Nil) = r.args.splitAt(r.args.size - 1)
-              if (!hasSideEffect(t)) {
-                val nt = annotateWith(t, Annotation.sideEffect)
-                val res = TypeRef(r.pre, r.sym, h ::: nt :: Nil)
-                res
-              } else tpe
-            case other if (!hasSideEffect(other)) ⇒
-              annotateWith(tpe, Annotation.sideEffect)
-            case _ ⇒ tpe
+              val param :: result :: Nil = r.args
+              result match {
+                case SideEffectType(t) ⇒ tpe
+                case SideEffectFreeType(t) ⇒
+                  reporter.error(tree.pos, "Impure function may not return a type annotated with @sideEffectFree: " + t)
+                  tpe
+                case t ⇒
+                  val nt = annotateWith(t, Annotation.sideEffect)
+                  println("@@@ annotating " + t + "   to   " + nt) //TODO remove
+                  TypeRef(r.pre, r.sym, param :: nt :: Nil)
+              }
+            case t ⇒
+              reporter.warning(tree.pos, "Unexpected function type: " + t)
+              tpe
+          }
+        case Function(vparams, body) ⇒
+          //pure function
+          println("rrB =" + tpe + "      " + tpe.resultType)
+          //TODO need to cast to purify the return type. (else: type mismatch f: Int, r: Int @sideEffectFree). How?
+          //TODO Idea: Add a __infered_sideEffect__ annotation to the return path of all functions and methods and
+          //           allow conversions from this annotation to @sideEffectFree in annotationConforms
+          tpe match {
+            case r: TypeRef ⇒
+              val param :: result :: Nil = r.args
+              result match {
+                case SideEffectFreeType(t) ⇒ tpe
+                case SideEffectType(t)     ⇒ tpe
+                case t ⇒
+                  val nt = annotateWith(t, Annotation.sideEffectFree)
+                  println("@@@ annotating " + t + "   to   " + nt) //TODO remove
+                  TypeRef(r.pre, r.sym, param :: nt :: Nil)
+              }
+            case t ⇒
+              reporter.warning(tree.pos, "Unexpected function type: " + t)
+              tpe
           }
         case _ ⇒ tpe
       }
+      tpe
     }
 
     override def canAdaptAnnotations(tree: Tree, mode: Int, pt: Type): Boolean = {
-      //println("# canAdapt  tree=" + tree + "  mode=" + analyzer.modeString(mode) + "  pt=" + pt + "  class=" + tree.getClass)
-      if ((mode & analyzer.EXPRmode) == 0 || (mode & analyzer.LHSmode) != 0) false
-      else if (phase.name == "tailcalls") false //don't do anything in the tailcall phase
-      else tree match {
-        case a @ ApplySideEffect(_)            ⇒ false
-        case a @ MarkReturnValue(_, _)         ⇒ true
-        case a: Apply if hasSideEffect(a.tpe)  ⇒ true
-        case i: Ident if hasSideEffect(i.tpe)  ⇒ true
-        case s: Select if hasSideEffect(s.tpe) ⇒ true
-        case _                                 ⇒ false
-      }
+      println("# canAdapt  tree=" + tree + "  mode=" + analyzer.modeString(mode) + "  pt=" + pt + "  class=" + tree.getClass)
+      false
     }
 
-    private[this] val recursive = new ThreadLocal[Boolean]
-    def dontRecurse[A](rec: A)(f: ⇒ A): A = {
-      if (recursive.get) rec
-      else
-        try {
-          recursive.set(true)
-          f
-        } finally {
-          recursive.set(false)
-        }
-    }
-    private object SuperConstructor {
-      def unapply(t: Tree) = t match {
-        case a @ Apply(f @ Select(Super(This(_), _), n), _) if n == stringToTermName("<init>") ⇒ Some(a)
-        case _ ⇒ None
-      }
-    }
     override def adaptAnnotations(tree: Tree, mode: Int, pt: Type): Tree = {
-      lazy val localTyper = analyzer.newTyper(analyzer.rootContext(currentRun.currentUnit, tree, false))
-      def typed(a: Tree) = dontRecurse(tree)(localTyper.typed(a))
-
       //println("# adapt  tree=" + tree + "  mode=" + analyzer.modeString(mode) + "  pt=" + pt)
-      tree match {
-        // get rid of all markReturnValue calls
-        case MarkReturnValue(ApplySideEffect(a), _) ⇒ //remove applySideEffect on the method's return path
-          a
-        case MarkReturnValue(a, true) if !hasSideEffect(a.tpe) ⇒ //addSideEffect on return path
-          typed(addSideEffect(a))
-        case MarkReturnValue(a, _) ⇒
-          a
-
-        case SuperConstructor(a) ⇒
-          a
-
-        case a @ AddSideEffect(_) ⇒
-          a
-
-        case tree ⇒
-          typed(applySideEffect(tree))
-      }
-    }
-
-    override def adaptBoundsToAnnotations(bounds: List[TypeBounds], tparams: List[Symbol], targs: List[Type]): List[TypeBounds] = {
-      //println("# Bounds bounds=" + bounds + "   tparams" + tparams + "    " + targs)
-      bounds.zip(targs).map { e ⇒
-        val (bound, targ) = e
-        def boundsWithSef = bound.lo.dealias.hasAnnotation(Annotation.sef) || bound.hi.dealias.hasAnnotation(Annotation.sef)
-        if (hasSideEffect(targ) && !boundsWithSef) TypeBounds(withSideEffect(bound.lo), withSideEffect(bound.hi))
-        else bound
-      }
+      tree
     }
   }
 }
