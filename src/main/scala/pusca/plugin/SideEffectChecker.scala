@@ -83,8 +83,7 @@ abstract class SideEffectChecker extends PuscaDefinitions {
       //println("# addAnnotations type of tree=" + tree.getClass + "   tpe=" + tpe + "\n       tree=" + tree)
       tree match {
         case f @ Function(vparams, body) if PurityChecker(f).nonEmpty ⇒
-          //impure function, so annotate the return type
-          println("rrA =" + tpe + "      " + tpe.resultType)
+          //impure function, so annotate the return type with @sideEffect
           tpe match {
             case r: TypeRef ⇒
               val param :: result :: Nil = r.args
@@ -95,7 +94,6 @@ abstract class SideEffectChecker extends PuscaDefinitions {
                   tpe
                 case t ⇒
                   val nt = removeAnnotation(annotateWith(t, Annotation.sideEffect), Annotation.returnedInfere)
-                  println("@@@ annotating " + t + "   to   " + nt) //TODO remove
                   TypeRef(r.pre, r.sym, param :: nt :: Nil)
               }
             case t ⇒
@@ -103,11 +101,7 @@ abstract class SideEffectChecker extends PuscaDefinitions {
               tpe
           }
         case Function(vparams, body) ⇒
-          //pure function
-          println("rrB =" + tpe + "      " + tpe.resultType)
-          //TODO need to cast to purify the return type. (else: type mismatch f: Int, r: Int @sideEffectFree). How?
-          //TODO Idea: Add a __infered_sideEffect__ annotation to the return path of all functions and methods and
-          //           allow conversions from this annotation to @sideEffectFree in annotationConforms
+          //pure function, so annotate the return type with @sideEffectFree
           tpe match {
             case r: TypeRef ⇒
               val param :: result :: Nil = r.args
@@ -116,7 +110,6 @@ abstract class SideEffectChecker extends PuscaDefinitions {
                 case SideEffectType(t)     ⇒ tpe
                 case t ⇒
                   val nt = removeAnnotation(annotateWith(t, Annotation.sideEffectFree), Annotation.returnedInfere)
-                  println("@@@ annotating " + t + "   to   " + nt) //TODO remove
                   TypeRef(r.pre, r.sym, param :: nt :: Nil)
               }
             case t ⇒
