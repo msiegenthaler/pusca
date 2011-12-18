@@ -10,38 +10,6 @@ abstract class SideEffectChecker extends PuscaDefinitions {
   import definitions._
 
   object checker extends AnnotationChecker {
-    //TODO move to PuscaDefinition
-    /** A side-effect free type */
-    object SideEffectFreeType {
-      def unapply(t: Type) = {
-        if (t.dealias.hasAnnotation(Annotation.sideEffectFree)) Some(t)
-        else None
-      }
-    }
-    /** A type with side effect */
-    object SideEffectType {
-      def unapply(t: Type) = {
-        if (t.dealias.hasAnnotation(Annotation.sideEffect)) Some(t)
-        else None
-      }
-    }
-    /** A type with neither @sideEffect and @sideEffectFree */
-    object UnspecifiedSideEffectType {
-      def unapply(t: Type) = {
-        if (!t.dealias.hasAnnotation(Annotation.sideEffect) && !t.dealias.hasAnnotation(Annotation.sideEffectFree)) Some(t)
-        else None
-      }
-    }
-    /** A type on the return path, that has been marked by MethodReturnTypeAnnotatorComponent */
-    object MarkReturnType {
-      def unapply(t: Type) = t match {
-        case t if t.hasAnnotation(Annotation.returnedInfere) ⇒ Some(MarkInfere)
-        case t if t.hasAnnotation(Annotation.returnedSideEffect) ⇒ Some(MarkSideEffect)
-        case t if t.hasAnnotation(Annotation.returnedSideEffectFree) ⇒ Some(MarkSideEffectFree)
-        case _ ⇒ None
-      }
-    }
-
     def annotationsConform(tpe1: Type, tpe2: Type): Boolean = {
       // Example:
       //   val a: <tpe1>
@@ -121,7 +89,7 @@ abstract class SideEffectChecker extends PuscaDefinitions {
     }
 
     override def canAdaptAnnotations(tree: Tree, mode: Int, pt: Type): Boolean = {
-      println("# canAdapt  tree=" + tree + "  mode=" + analyzer.modeString(mode) + "  pt=" + pt + "  class=" + tree.getClass)
+      //println("# canAdapt  tree=" + tree + "  mode=" + analyzer.modeString(mode) + "  pt=" + pt + "  class=" + tree.getClass)
       false
     }
 

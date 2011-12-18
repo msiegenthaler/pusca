@@ -42,7 +42,10 @@ trait PuscaDefinitions {
   }
   protected def removeAnnotation(tpe: Type, a: Symbol): Type = {
     tpe.withoutAnnotations.withAnnotations(tpe.annotations.filterNot(_.atp.typeSymbol == a))
+
   }
+
+  //TODO still needed and correct?
   object AlwaysPureType {
     def unapply(t: Type) = {
       if (t.typeSymbol.isTypeParameterOrSkolem) {
@@ -50,6 +53,37 @@ trait PuscaDefinitions {
         else None
       } else if (t.hasAnnotation(Annotation.sideEffect)) None
       else Some(())
+    }
+  }
+
+  /** A side-effect free type */
+  object SideEffectFreeType {
+    def unapply(t: Type) = {
+      if (t.dealias.hasAnnotation(Annotation.sideEffectFree)) Some(t)
+      else None
+    }
+  }
+  /** A type with side effect */
+  object SideEffectType {
+    def unapply(t: Type) = {
+      if (t.dealias.hasAnnotation(Annotation.sideEffect)) Some(t)
+      else None
+    }
+  }
+  /** A type with neither @sideEffect and @sideEffectFree */
+  object UnspecifiedSideEffectType {
+    def unapply(t: Type) = {
+      if (!t.dealias.hasAnnotation(Annotation.sideEffect) && !t.dealias.hasAnnotation(Annotation.sideEffectFree)) Some(t)
+      else None
+    }
+  }
+  /** A type on the return path, that has been marked by MethodReturnTypeAnnotatorComponent */
+  object MarkReturnType {
+    def unapply(t: Type) = t match {
+      case t if t.hasAnnotation(Annotation.returnedInfere) ⇒ Some(MarkInfere)
+      case t if t.hasAnnotation(Annotation.returnedSideEffect) ⇒ Some(MarkSideEffect)
+      case t if t.hasAnnotation(Annotation.returnedSideEffectFree) ⇒ Some(MarkSideEffectFree)
+      case _ ⇒ None
     }
   }
 
