@@ -227,7 +227,7 @@ class FunctionTypeTest extends JUnitSuite with ShouldMatchersForJUnit {
     code("""
         @impure def ia(v: String): Int = v.length
         val f: String => Int = ia _
-        """) should yieldCompileError("type mismatch")
+        """) should compile
   }
   @Test def assignImpureDefToPureFunVal {
     code("""
