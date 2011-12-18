@@ -50,6 +50,7 @@ class impureIfReturnType extends PurenessAnnotation
  */
 class sideEffect extends PurenessAnnotation with TypeConstraint
 /**
- * Applicable on type parameters to indicate that they must not be annotated with @sideEffect.
+ * Applicable on types that are used as return type to express the along with the type no side effect is caused
+ * by the method and that the method does not depend on a side effect.
  */
 class sideEffectFree extends PurenessAnnotation with TypeConstraint

@@ -20,19 +20,10 @@ abstract class SideEffectChecker extends PuscaDefinitions {
           case SideEffectFreeType(_)              ⇒ true
           case MarkReturnType(MarkSideEffectFree) ⇒ true
           case MarkReturnType(MarkInfere)         ⇒ true
-          case t if t.typeSymbol == NothingClass  ⇒ true //'Nothing' is sideEffectFree, because otherwise it's not ground
+          case t if t.typeSymbol == NothingClass  ⇒ true //'Nothing' is sideEffectFree, because otherwise it's not a subclass of everything
           case _                                  ⇒ false
         }
-        //TODO should an assign of Int @sideEffect to Int be possible?
-        case SideEffectType(_) ⇒ true
-        case _ ⇒
-          println("  matching " + tpe2+" ("+tpe2.dealias+")")
-          tpe1 match {
-            case SideEffectType(_)              ⇒ false
-            case MarkReturnType(MarkSideEffect) ⇒ false
-            case _                              ⇒ true
-          }
-        //        case _ ⇒ true
+        case _ ⇒ true
       }
       println("      conform = " + r)
       r
