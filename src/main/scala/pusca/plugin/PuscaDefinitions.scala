@@ -21,12 +21,10 @@ trait PuscaDefinitions {
     val sideEffectFree = definitions.getClass("pusca.sideEffectFree")
 
     val returnedInfere = definitions.getClass("pusca.Internal.returnedInfere")
-    val returnedSideEffect = definitions.getClass("pusca.Internal.returnedSideEffect")
-    val returnedSideEffectFree = definitions.getClass("pusca.Internal.returnedSideEffectFree")
 
     val allForMethod = pure :: impure :: impureIf :: impureIfReturnType :: declarePure :: Nil
     val allForTypes = sideEffect :: sideEffectFree :: Nil
-    val internalForTypes = returnedInfere :: returnedSideEffect :: returnedSideEffectFree :: Nil
+    val internalForTypes = returnedInfere :: Nil
   }
 
   //TODO deprecate (use tpe.hasAnnotation)
@@ -78,11 +76,9 @@ trait PuscaDefinitions {
     }
   }
   /** A type on the return path, that has been marked by MethodReturnTypeAnnotatorComponent */
-  object MarkReturnType {
+  object MarkInfereReturnType {
     def unapply(t: Type) = t match {
       case t if t.hasAnnotation(Annotation.returnedInfere) ⇒ Some(MarkInfere)
-      case t if t.hasAnnotation(Annotation.returnedSideEffect) ⇒ Some(MarkSideEffect)
-      case t if t.hasAnnotation(Annotation.returnedSideEffectFree) ⇒ Some(MarkSideEffectFree)
       case _ ⇒ None
     }
   }

@@ -17,11 +17,10 @@ abstract class SideEffectChecker extends PuscaDefinitions {
       println("# annotations " + tpe1 + " conforms to " + tpe2)
       val r = tpe2 match {
         case SideEffectFreeType(_) ⇒ tpe1 match {
-          case SideEffectFreeType(_)              ⇒ true
-          case MarkReturnType(MarkSideEffectFree) ⇒ true
-          case MarkReturnType(MarkInfere)         ⇒ true
-          case t if t.typeSymbol == NothingClass  ⇒ true //'Nothing' is sideEffectFree, because otherwise it's not a subclass of everything
-          case _                                  ⇒ false
+          case SideEffectFreeType(_)             ⇒ true
+          case MarkInfereReturnType(_)           ⇒ true
+          case t if t.typeSymbol == NothingClass ⇒ true //'Nothing' is sideEffectFree, because otherwise it's not a subclass of everything
+          case _                                 ⇒ false
         }
         case _ ⇒ true
       }
