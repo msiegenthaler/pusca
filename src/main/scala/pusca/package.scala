@@ -13,8 +13,4 @@ package object pusca {
   /** Function that evaluates without a side effect. */
   type ImpureFunction[-V1, +R] = Function1[V1, R @sideEffect]
   type ==>[-V1, +R] = ImpureFunction[V1, R]
-
-
-  //TODO
-  //@inline def purify[A](a: A): A @sideEffectFree = a
 }
