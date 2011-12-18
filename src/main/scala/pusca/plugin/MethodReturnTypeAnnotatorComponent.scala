@@ -19,23 +19,26 @@ class MethodReturnTypeAnnotatorComponent(val global: Global) extends PluginCompo
 
   class MethodReturnTypeAnnotator extends Transformer {
     override def transform(tree: Tree): Tree = tree match {
+      case Constructor(d) ⇒
+        //TODO Handle impure classes
+        super.transform(d)
+
       case d: DefDef if !hasPuscaMethodAnnotation(d) ⇒
         //annotate all methods without an annotation with @impureIfReturnType
         val nmods = d.mods.withAnnotations(makeAnnotation(Annotation.impureIfReturnType) :: d.mods.annotations)
         val ndef = treeCopy.DefDef(d, nmods, d.name, d.tparams, d.vparamss, d.tpt, d.rhs)
         transform(ndef) //process again
 
-      //TODO handle constructors
-
       //return type is inferred
       case d @ DefDef(_, _, _, _, TypeTree(), rhs) ⇒ //no return type declared, so mark the return path
-        val m = d match {
-          case d: DefDef if hasAnnotation(d, Annotation.pure) ⇒ MarkSideEffectFree
-          case d: DefDef if hasAnnotation(d, Annotation.impure) ⇒ MarkSideEffect
-          case _ ⇒ MarkInfere
-        }
-        val nrhs = MarkerFun(m)(rhs)
-        val ndef = treeCopy.DefDef(d, d.mods, d.name, d.tparams, d.vparamss, TypeTree(), d.rhs)
+        val ndef = {d match {
+          case d: DefDef if hasAnnotation(d, Annotation.pure) ⇒ Some(MarkSideEffectFree)
+          case d: DefDef if hasAnnotation(d, Annotation.impure) ⇒ Some(MarkSideEffect)
+          case _ ⇒ None
+        }}.map { m =>
+	        val nrhs = MarkerFun(m)(rhs)
+	        treeCopy.DefDef(d, d.mods, d.name, d.tparams, d.vparamss, TypeTree(), nrhs)
+        }.getOrElse(d)
         super.transform(ndef)
 
       //annotate the return type with @sideEffect or @sideEffectFree

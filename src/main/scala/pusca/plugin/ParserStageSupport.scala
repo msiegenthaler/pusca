@@ -37,5 +37,10 @@ private[plugin] trait ParserStageSupport extends PuscaDefinitions {
     case _ ⇒ t
   }
 
-  protected def isConstructor(d: DefDef) = d.name.toString == "<init>"
+  object Constructor {
+    def unapply(d: DefDef) = {
+      if (d.name.toString == "<init>") Some(d)
+      else None
+    }
+  }
 }
