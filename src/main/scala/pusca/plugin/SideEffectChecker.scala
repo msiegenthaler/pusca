@@ -94,7 +94,7 @@ abstract class SideEffectChecker extends PuscaDefinitions {
                   reporter.error(tree.pos, "Impure function may not return a type annotated with @sideEffectFree: " + t)
                   tpe
                 case t ⇒
-                  val nt = annotateWith(t, Annotation.sideEffect)
+                  val nt = removeAnnotation(annotateWith(t, Annotation.sideEffect), Annotation.returnedInfere)
                   println("@@@ annotating " + t + "   to   " + nt) //TODO remove
                   TypeRef(r.pre, r.sym, param :: nt :: Nil)
               }
@@ -125,7 +125,6 @@ abstract class SideEffectChecker extends PuscaDefinitions {
           }
         case _ ⇒ tpe
       }
-      tpe
     }
 
     override def canAdaptAnnotations(tree: Tree, mode: Int, pt: Type): Boolean = {
