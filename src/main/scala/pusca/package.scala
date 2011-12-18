@@ -10,7 +10,7 @@ package object pusca {
   type PureFunction[-V1, +R] = Function1[V1, R @sideEffectFree]
   type ->[-V1, +R] = PureFunction[V1, R]
 
-  /** Function that evaluates without a side effect. */
+  /** Function that evaluates with a side effect. */
   type ImpureFunction[-V1, +R] = Function1[V1, R @sideEffect]
   type ==>[-V1, +R] = ImpureFunction[V1, R]
 }
