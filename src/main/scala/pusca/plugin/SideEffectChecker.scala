@@ -115,7 +115,7 @@ abstract class SideEffectChecker extends PuscaDefinitions {
                 case SideEffectFreeType(t) ⇒ tpe
                 case SideEffectType(t)     ⇒ tpe
                 case t ⇒
-                  val nt = annotateWith(t, Annotation.sideEffectFree)
+                  val nt = removeAnnotation(annotateWith(t, Annotation.sideEffectFree), Annotation.returnedInfere)
                   println("@@@ annotating " + t + "   to   " + nt) //TODO remove
                   TypeRef(r.pre, r.sym, param :: nt :: Nil)
               }
