@@ -11,7 +11,7 @@ import scala.tools.nsc.symtab.Flags
 class PurityCheckerComponent(val global: Global) extends PluginComponent with PuscaDefinitions {
   import global._
 
-  override val runsAfter = List("typer", "forbiddenSideEffectAssignment", "purityDeclarationConflictDetector", "uncurry")
+  override val runsAfter = List("typer", "purityDeclarationConflictDetector", "uncurry")
   override val runsBefore = List("tailcalls")
   val phaseName = "purityChecker"
   def newPhase(prev: Phase) = new PurityChecker(prev)

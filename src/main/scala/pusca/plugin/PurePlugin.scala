@@ -11,14 +11,11 @@ class PurePlugin(val global: Global) extends Plugin {
   val description = "Enforces pureness"
   val components = List[PluginComponent]( //
     //ShowTreeComponent, //
-    new RemovePuscaFunctionsComponent(global),
+    new MethodReturnTypeAnnotatorComponent(global),
     new PurityCheckerComponent(global),
     new ConstructorOverrideComponent(global),
-    new MarkMethodReturnPathComponent(global),
     new DeclarationConflictDetectorComponent(global),
-    new UnnecessaryDeclarePureComponent(global),
-    new ForbiddenSideEffectAssignmentComponent(global),
-    new MethodReturnTypeAnnotatorComponent(global))
+    new UnnecessaryDeclarePureComponent(global))
 
   val checker = new SideEffectChecker {
     val global: PurePlugin.this.global.type = PurePlugin.this.global
@@ -30,7 +27,7 @@ class PurePlugin(val global: Global) extends Plugin {
     val global: PurePlugin.this.global.type = PurePlugin.this.global
     //override val runsAfter = List("markMethodReturnPath", "methodReturnTypeAnnotator")
     //override val runsRightAfter = Some("markMethodReturnPath")
-    override val runsAfter = List("typer", "forbiddenSideEffectAssignment")
+    override val runsAfter = List("typer")
     override val runsBefore = List("purityChecker")
     val phaseName = "showTree"
     def newPhase(_prev: Phase) = new ShowTreePhase(_prev)
