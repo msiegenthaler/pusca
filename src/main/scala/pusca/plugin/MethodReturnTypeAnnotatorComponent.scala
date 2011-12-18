@@ -51,7 +51,8 @@ class MethodReturnTypeAnnotatorComponent(val global: Global) extends PluginCompo
         super.transform(ndef)
       case d: DefDef if hasAnnotation(d, Annotation.pure) && !hasAnnotation(d.tpt, Annotation.sideEffectFree) ⇒
         val ntpt = annotate(d.tpt, Annotation.sideEffectFree)
-        val ndef = treeCopy.DefDef(d, d.mods, d.name, d.tparams, d.vparamss, ntpt, d.rhs)
+        val nrhs = MarkerFun(MarkSideEffectFree)(d.rhs) //may cause impure to be 'casted' to pure, but the PurityChecker will find out 
+        val ndef = treeCopy.DefDef(d, d.mods, d.name, d.tparams, d.vparamss, ntpt, nrhs)
         super.transform(ndef)
 
       //annotate the return values of anon functions with infere
