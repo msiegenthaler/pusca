@@ -87,15 +87,24 @@ trait PuscaDefinitions {
     }
   }
 
-  protected lazy val puscaPackage = definitions.getModule("pusca")
-  protected lazy val packageObject = stringToTermName("package")
-  //TODO delete
-  protected lazy val markReturnValueMethod = definitions.getMember(puscaPackage, "__internal__markReturnValue")
-
   protected sealed trait Mark
   protected object MarkInfere extends Mark
   protected object MarkSideEffect extends Mark
   protected object MarkSideEffectFree extends Mark
+
+  object MarkMethod {
+    def unapply(s: Symbol) = s match {
+      case this.markInfereMethod         ⇒ Some(MarkInfere)
+      case this.markSideEffectMethod     ⇒ Some(MarkSideEffect)
+      case this.markSideEffectFreeMethod ⇒ Some(MarkSideEffectFree)
+      case _                             ⇒ None
+    }
+    private lazy val puscaPackage = definitions.getModule("pusca")
+    private lazy val puscaInternalObject = definitions.getMember(puscaPackage, "Internal")
+    private lazy val markInfereMethod = definitions.getMember(puscaInternalObject, "markInfere")
+    private lazy val markSideEffectMethod = definitions.getMember(puscaInternalObject, "markSideEffect")
+    private lazy val markSideEffectFreeMethod = definitions.getMember(puscaInternalObject, "markSideEffectFree")
+  }
 
   object Purity {
     sealed trait Purity
@@ -109,9 +118,11 @@ trait PuscaDefinitions {
      * Does not take the body of the method into account, whether the body conforms to the declaration is checked elsewhere.
      */
     def purityOf(s: Symbol): Purity = s match {
+      case MarkMethod(_)                                 ⇒ AlwaysPure
       case s if s.isSetter                               ⇒ AlwaysImpure //setter of var
       case s if s.isGetter && !s.isStable                ⇒ AlwaysImpure //getter on var
       case s if s.isGetter                               ⇒ AlwaysPure //  getter on val
+      case s if s.isConstructor                          ⇒ purityOf(s.owner)
       case s if hasAnnotation(s, Annotation.pure)        ⇒ AlwaysPure
       case s if hasAnnotation(s, Annotation.declarePure) ⇒ DeclaredPure
       case s if hasAnnotation(s, Annotation.impure)      ⇒ AlwaysImpure
@@ -121,25 +132,25 @@ trait PuscaDefinitions {
           case None                             ⇒ Nil
         }
         ImpureDependingOn(impureIfs.toSet)
-      case s if s.isConstructor ⇒ purityOf(s.owner)
-      case s: MethodSymbol if hasAnnotation(s, Annotation.impureIfReturnType) ⇒
+      case s: MethodSymbol if s.hasAnnotation(Annotation.impureIfReturnType) ⇒
         purityOfType(resultType(s))
       case s: MethodSymbol ⇒ //method that was not processed with pusca
         //TODO have a dictionary of some common methods/packages and make all others @impure 
-        //println("! Call not pusca-compiled method " + s.owner.name + "." + s.name + "  (purity = " + purityOfType(resultType(s)) + ", resultType=" + resultType(s) + ")")
+        println("! Call not pusca-compiled method " + s.owner.name + "." + s.name + "  (purity = " + purityOfType(resultType(s)) + ", resultType=" + resultType(s) + ")")
         purityOfType(resultType(s))
       case _ ⇒ AlwaysPure
     }
     private def purityOfType(tpe: Type) = {
       val s = tpe.typeSymbol
+      println("@@@ Purity of " + tpe)
       //TODO
       //AlwaysPure
       if (s.isTypeParameterOrSkolem) {
-        //        println("purityOfType   " + tpe + "   " + s)
-        //        println("@@@  parents = " + tpe.parents)
-        //        println("@@@  owner = " + s.owner)
-        //        println("@@@  underlying = " + tpe.underlying)
-        //        println("@@@  dealias = " + tpe.dealias)
+        //                println("purityOfType   " + tpe + "   " + s)
+        //                println("@@@  parents = " + tpe.parents)
+        //                println("@@@  owner = " + s.owner)
+        //                println("@@@  underlying = " + tpe.underlying)
+        //                println("@@@  dealias = " + tpe.dealias)
         ImpureDependingOn(Set(s.name.toString))
       } else if (hasAnnotation(tpe, Annotation.sideEffect)) AlwaysImpure
       else AlwaysPure
