@@ -137,7 +137,7 @@ class FunctionTypeTest extends JUnitSuite with ShouldMatchersForJUnit {
         val f: String -> Int = s => len(s)
         """) should compile
   }
-  
+
   @Test def anonFunctionWithoutSideEffectCanBeAssignedToPlain {
     code("""
         val f: String => Int = s => s.length
@@ -173,4 +173,71 @@ class FunctionTypeTest extends JUnitSuite with ShouldMatchersForJUnit {
         val f: String -> Int = s => ip(s)
         """) should yieldCompileError("type mismatch")
   }
+
+  @Test def assignPureDefToPureFunVal {
+    code("""
+        @pure def a(v: String): Int = v.length
+        val f: String -> Int = a _
+        """) should compile
+  }
+  @Test def assignPureDefToFunVal {
+    code("""
+        @pure def a(v: String): Int = v.length
+        val f: String => Int = a _
+        """) should compile
+  }
+  @Test def assignImpureDefToImpureFunVal {
+    code("""
+        @impure def ia(v: String): Int = v.length
+        val f: String => Impure[Int] = ia _
+        """) should compile
+  }
+  @Test def assignImpureDefToImpureFunVal2 {
+    code("""
+        @impure def ia(v: String): Int = v.length
+        val f: String ==> Int = ia _
+        """) should compile
+  }
+  @Test def assignImpureDefToFunVal {
+    code("""
+        @impure def ia(v: String): Int = v.length
+        val f: String => Int = ia _
+        """) should yieldCompileError("type mismatch")
+  }
+  @Test def assignImpureDefToPureFunVal {
+    code("""
+        @impure def ia(v: String): Int = v.length
+        val f: String -> Int = ia _
+        """) should yieldCompileError("type mismatch")
+  }
+
+  @Test def applyImpureInInfered {
+    code("""
+        def meth[A](f: String => A): A = f("Hi")
+        """) should compile
+  }
+
+  @Test def applyPureInPure {
+    code("""
+    		@pure def meth[B](f: String => Pure[B]): B = f("Hi")
+        """) should compile
+  }
+  @Test def applyPureInPure2 {
+    code("""
+    		@pure def meth[B](f: String -> B): B = f("Hi")
+        """) should compile
+  }
+  @Test def applyPureInPure3 {
+    code("""
+    		@pure def meth[B](f: String => B @sideEffectFree): B = f("Hi")
+        """) should compile
+  }
+
+  @Test def applyPureInInferedThatShouldBePure {
+    code("""
+    		def meth[B](f: String -> B): B = f("Hi")
+        @pure def p = meth(_.length)
+        """) should compile
+  }
+
 }
