@@ -148,7 +148,32 @@ class FunctionTypeTest extends JUnitSuite with ShouldMatchersForJUnit {
         val f: String ==> Int = s => s.length
         """) should compile
   }
-  @Test def anonFunctionWithSidteEffectIsImpure {
+  @Test def anonFunctionWithSideEffectIsImpureWithAnnotation {
+    code("""
+        @impure def ip(s: String): Int = s.length
+        val f: String => Int @sideEffect = s => ip(s)
+    """) should compile
+  }
+  @Test def anonFunctionWithSideEffectIsImpure {
+    code("""
+        @impure def ip(s: String): Int = s.length
+        val f: String ==> Int = s => ip(s)
+    """) should compile
+  }
+  @Test def anonFunctionWithSideEffectIsImpureCheckImpure {
+    code("""
+        @impure def ip(s: String): Int = s.length
+        val f: String ==> Int = s => ip(s)
+        @pure def p: Int = f("Ho")
+        """) should yieldCompileError("impure method call to apply inside the pure method p")
+  }
+  @Test def anonFunctionWithSideEffectIsImpure2 {
+    code("""
+        @impure def ip(s: String) = s.length
+        val f: String ==> Int = s => ip(s)
+        """) should compile
+  }
+  @Test def anonFunctionWithSideEffectIsImpure2CheckImpure {
     code("""
         @impure def ip(s: String) = s.length
         val f: String ==> Int = s => ip(s)
@@ -219,23 +244,23 @@ class FunctionTypeTest extends JUnitSuite with ShouldMatchersForJUnit {
 
   @Test def applyPureInPure {
     code("""
-    		@pure def meth[B](f: String => Pure[B]): B = f("Hi")
+        @pure def meth[B](f: String => Pure[B]): B = f("Hi")
         """) should compile
   }
   @Test def applyPureInPure2 {
     code("""
-    		@pure def meth[B](f: String -> B): B = f("Hi")
+        @pure def meth[B](f: String -> B): B = f("Hi")
         """) should compile
   }
   @Test def applyPureInPure3 {
     code("""
-    		@pure def meth[B](f: String => B @sideEffectFree): B = f("Hi")
+        @pure def meth[B](f: String => B @sideEffectFree): B = f("Hi")
         """) should compile
   }
 
   @Test def applyPureInInferedThatShouldBePure {
     code("""
-    		def meth[B](f: String -> B): B = f("Hi")
+        def meth[B](f: String -> B): B = f("Hi")
         @pure def p = meth(_.length)
         """) should compile
   }
