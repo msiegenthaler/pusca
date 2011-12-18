@@ -41,7 +41,7 @@ trait PuscaDefinitions {
     if (hasAnnotation(tpe, a)) tpe else tpe.withAnnotations(Annotation(a) :: tpe.annotations)
   }
   protected def removeAnnotation(tpe: Type, a: Symbol): Type = {
-    tpe.withAnnotations(tpe.annotations.filterNot(_.atp.typeSymbol == a))
+    tpe.withoutAnnotations.withAnnotations(tpe.annotations.filterNot(_.atp.typeSymbol == a))
   }
   object AlwaysPureType {
     def unapply(t: Type) = {
