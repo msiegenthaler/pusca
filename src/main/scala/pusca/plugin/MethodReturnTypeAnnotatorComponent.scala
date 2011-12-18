@@ -31,13 +31,15 @@ class MethodReturnTypeAnnotatorComponent(val global: Global) extends PluginCompo
 
       //return type is inferred
       case d @ DefDef(_, _, _, _, TypeTree(), rhs) ⇒ //no return type declared, so mark the return path
-        val ndef = {d match {
-          case d: DefDef if hasAnnotation(d, Annotation.pure) ⇒ Some(MarkSideEffectFree)
-          case d: DefDef if hasAnnotation(d, Annotation.impure) ⇒ Some(MarkSideEffect)
-          case _ ⇒ None
-        }}.map { m =>
-	        val nrhs = MarkerFun(m)(rhs)
-	        treeCopy.DefDef(d, d.mods, d.name, d.tparams, d.vparamss, TypeTree(), nrhs)
+        val ndef = {
+          d match {
+            case d: DefDef if hasAnnotation(d, Annotation.pure) ⇒ Some(MarkSideEffectFree)
+            case d: DefDef if hasAnnotation(d, Annotation.impure) ⇒ Some(MarkSideEffect)
+            case _ ⇒ None
+          }
+        }.map { m ⇒
+          val nrhs = MarkerFun(m)(rhs)
+          treeCopy.DefDef(d, d.mods, d.name, d.tparams, d.vparamss, TypeTree(), nrhs)
         }.getOrElse(d)
         super.transform(ndef)
 
@@ -58,6 +60,9 @@ class MethodReturnTypeAnnotatorComponent(val global: Global) extends PluginCompo
         val ndef = treeCopy.DefDef(d, d.mods, d.name, d.tparams, d.vparamss, ntpt, nrhs)
         super.transform(ndef)
 
+      //don't touch empty function (i.e. val f = doIt _)
+      case f @ Function(_, EmptyTree) ⇒
+        super.transform(f)
       //annotate the return values of anon functions with infere
       case f @ Function(vp, body) ⇒
         val nb = MarkerFun(MarkInfere)(f.body)
