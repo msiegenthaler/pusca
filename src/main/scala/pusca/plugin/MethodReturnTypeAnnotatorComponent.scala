@@ -38,7 +38,7 @@ class MethodReturnTypeAnnotatorComponent(val global: Global) extends PluginCompo
             case _ ⇒ None
           }
         }.map { m ⇒
-          val nrhs = MarkerFun(m)(rhs)
+          val nrhs = MarkMethod(m)(rhs)
           treeCopy.DefDef(d, d.mods, d.name, d.tparams, d.vparamss, TypeTree(), nrhs)
         }.getOrElse(d)
         super.transform(ndef)
@@ -56,7 +56,7 @@ class MethodReturnTypeAnnotatorComponent(val global: Global) extends PluginCompo
         super.transform(ndef)
       case d: DefDef if hasAnnotation(d, Annotation.pure) && !hasAnnotation(d.tpt, Annotation.sideEffectFree) ⇒
         val ntpt = annotate(d.tpt, Annotation.sideEffectFree)
-        val nrhs = MarkerFun(MarkSideEffectFree)(d.rhs) //may cause impure to be 'casted' to pure, but the PurityChecker will find out 
+        val nrhs = MarkMethod(MarkSideEffectFree)(d.rhs) //may cause impure to be 'casted' to pure, but the PurityChecker will find out 
         val ndef = treeCopy.DefDef(d, d.mods, d.name, d.tparams, d.vparamss, ntpt, nrhs)
         super.transform(ndef)
 
@@ -65,7 +65,7 @@ class MethodReturnTypeAnnotatorComponent(val global: Global) extends PluginCompo
         super.transform(f)
       //annotate the return values of anon functions with infere
       case f @ Function(vp, body) ⇒
-        val nb = MarkerFun(MarkInfere)(f.body)
+        val nb = MarkMethod(MarkInfere)(f.body)
         val nf = treeCopy.Function(f, vp, nb)
         super.transform(nf)
 
@@ -76,49 +76,5 @@ class MethodReturnTypeAnnotatorComponent(val global: Global) extends PluginCompo
       case other ⇒
         super.transform(tree)
     }
-
-    object MarkerFun {
-      private[this] def markFun(name: String) = Select(Select(Ident("pusca"), "Internal"), name)
-      private def markInfere = markFun("markInfere")
-      private def markSideEffect = markFun("markSideEffect")
-      private def markSideEffectFree = markFun("markSideEffectFree")
-      private def markFunFor(mark: Mark) = mark match {
-        case MarkInfere         ⇒ markInfere
-        case MarkSideEffect     ⇒ markSideEffect
-        case MarkSideEffectFree ⇒ markSideEffectFree
-      }
-
-      def apply(mark: Mark)(fun: Tree): Tree = {
-        val a = Apply(markFunFor(mark), fun :: Nil)
-        a.pos = fun.pos
-        a
-      }
-    }
-    /*
-    def transformReturn(tree: Tree, mark: Mark): Tree = {
-      tree match {
-        case a: Apply   ⇒ mark(a, m)
-        case i: Ident   ⇒ mark(i, se)
-        case s: Select  ⇒ mark(s, se)
-        case l: Literal ⇒ mark(l, se)
-
-        case b @ Block(stmts, expr) ⇒
-          val ne = transformReturn(expr, se)
-          treeCopy.Block(b, stmts, ne)
-        case i @ If(c, t, e) ⇒
-          treeCopy.If(i, c, transformReturn(t, se), transformReturn(e, se))
-        case m @ Match(sel, cases) ⇒
-          val nc = cases.map(transformReturn(_, se).asInstanceOf[CaseDef])
-          treeCopy.Match(m, sel, nc)
-        case t @ Try(b, cs, f) ⇒
-          val ncs = cs.map(transformReturn(_, se).asInstanceOf[CaseDef])
-          treeCopy.Try(t, transformReturn(b, se), ncs, f)
-        case c @ CaseDef(p, g, expr) ⇒
-          treeCopy.CaseDef(c, p, g, transformReturn(expr, se))
-
-        case other ⇒ super.transform(other)
-      }
-    }
-    */
   }
 }
