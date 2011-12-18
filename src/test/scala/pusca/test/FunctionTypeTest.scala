@@ -131,9 +131,10 @@ class FunctionTypeTest extends JUnitSuite with ShouldMatchersForJUnit {
         val f: String => Int @sideEffectFree = s => s.length
         """) should compile
   }
-  @Test def anonFunctionWithoutSideEffectIsPure4 {
+  @Test def anonFunctionWithoutSideEffectIsPure7 {
     code("""
-        val f: String => Pure[Int] = s => s.length
+        @pure def len(s: String): Int = 10
+        val f: String -> Int = s => len(s)
         """) should compile
   }
   
@@ -147,8 +148,7 @@ class FunctionTypeTest extends JUnitSuite with ShouldMatchersForJUnit {
         val f: String ==> Int = s => s.length
         """) should compile
   }
-  
-  @Test def anonFunctionWithSideEffectIsImpure {
+  @Test def anonFunctionWithSidteEffectIsImpure {
     code("""
         @impure def ip(s: String) = s.length
         val f: String ==> Int = s => ip(s)
