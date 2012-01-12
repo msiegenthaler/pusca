@@ -1,4 +1,4 @@
-package pusca.plugin
+package pusca.plugin.old
 import scala.tools.nsc.Global
 
 private[plugin] trait ParserStageSupport extends PuscaDefinitions {

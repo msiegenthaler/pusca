@@ -1,4 +1,4 @@
-package pusca.plugin
+package pusca.plugin.old
 
 import scala.tools.nsc.plugins.PluginComponent
 import scala.tools.nsc.transform.Transform

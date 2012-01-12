@@ -45,11 +45,6 @@ class impureIf(params: Symbol*) extends PurenessAnnotation
 class impureIfReturnType extends PurenessAnnotation
 
 /**
- * Applicable on types that are used as return type to express the along with the type a side effect is caused
- * by the method (or the method depends on a side effect
- */
-class sideEffect extends PurenessAnnotation with TypeConstraint
-/**
  * Applicable on types that are used as return type to express the along with the type no side effect is caused
  * by the method and that the method does not depend on a side effect.
  */

@@ -1,4 +1,4 @@
-package pusca.test
+package pusca.test.old
 
 import org.scalatest.junit.JUnitSuite
 import org.scalatest.junit.ShouldMatchersForJUnit

@@ -1,5 +1,4 @@
-package pusca
-package plugin
+package pusca.plugin.old
 
 import scala.tools.nsc.Global
 import scala.tools.nsc.symtab.Flags._

@@ -1,4 +1,4 @@
-package pusca.test
+package pusca.test.old
 
 import annotation._
 import java.io._
@@ -52,7 +52,6 @@ object PluginTester {
   def yieldCompileError(errors: String*) = new CompileErrorMatcher(errors.toList)
   def warn(warns: String*) = new CompileWarnsMatcher(warns.toList)
   val compile = new CompilesMatcher
-  val compileAndRun = new CompilesMatcher
 }
 
 private object InterpreterPool {
@@ -95,7 +94,8 @@ private class PluginInterpreter {
     s.classpath.value = ""
     s.classpath.append(jarForClass(classOf[List[_]])) //library
     s.classpath.append(jarForClass(classOf[IMain])) //compiler
-    s.classpath.append(jarForClass(classOf[PurePlugin]))
+    //TODO
+    //    s.classpath.append(jarForClass(classOf[PurePlugin]))
 
     //plugin classes must be inside a jar
     val pluginJar = createPluginJar
@@ -116,7 +116,6 @@ private class PluginInterpreter {
     val buffer = new Array[Byte](1024)
 
     def processDir(path: String, dir: File) {
-      if (!dir.isDirectory) throw new IllegalArgumentException("Directory " + dir + " does not exist")
       dir.listFiles.foreach { f ⇒
         if (f.isDirectory) {
           val np = path + f.getName + "/"
@@ -139,7 +138,9 @@ private class PluginInterpreter {
       fis.close
     }
 
-    val dir = new File(jarForClass(classOf[PurePlugin]))
+    //TODO
+    //    val dir = new File(jarForClass(classOf[PurePlugin]))
+    val dir = new File("")
     processDir("", dir)
 
     jos.close
@@ -158,7 +159,7 @@ private class PluginInterpreter {
 }
 
 class PluginTester {
-  val code: List[String] = "import pusca._; import pusca.Internal._" :: Nil
+  val code: List[String] = "import pusca._" :: Nil
 
   def fromClasspath(n: String) = {
     val is = classOf[PluginTester].getResourceAsStream(n)
