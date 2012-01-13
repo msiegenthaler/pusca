@@ -66,11 +66,10 @@ trait PuscaDefinitions {
         ImpureDependingOn(impureIfs.map(scala.Symbol(_)).toSet)
       case s if s.hasAnnotation(Annotation.impureIfReturnType) ⇒
         val rt = returnTypeOf(s)
-        if (rt.typeSymbol.isTypeParameterOrSkolem) {
-          ImpureDependingOn(Set(scala.Symbol(s.name.toString)))
-        } else rt match {
-          case SideEffectFreeType(_) ⇒ AlwaysPure
-          case _                     ⇒ AlwaysImpure
+        rt match {
+          case SideEffectFreeType(_)                     ⇒ AlwaysPure
+          case t if t.typeSymbol.isTypeParameterOrSkolem ⇒ ImpureDependingOn(Set(scala.Symbol(rt.typeSymbol.name.toString)))
+          case _                                         ⇒ AlwaysImpure
         }
     }
     /** Handler for code that was not compiled by pusca */
@@ -179,6 +178,51 @@ trait PuscaDefinitions {
       }
     }
 
+    /**
+     * Gets the values used for the type parameters of a method.
+     * Example:
+     *  <code>
+     *  trait Example[B] {
+     *      def method1[A](a: A): B
+     *  }
+     *  new Example[String].method1(10)
+     *  </code>
+     * it returns: A -> Int, B -> String
+     */
+    private def resolveTypeParams(a: Apply): TypeMap = a.fun match {
+      case TypeApply(fun, targs) ⇒
+        val pl = fun.symbol.typeParams.map(tp ⇒ scala.Symbol(tp.name.toString)).toList
+        methodOwnerTypeParams(fun) ++ pl.zip(targs.map(_.tpe)).toMap
+      case f ⇒ methodOwnerTypeParams(f)
+    }
+    private type TypeMap = Map[scala.Symbol, Type]
+    private def methodOwnerTypeParams(t: Tree): TypeMap = {
+      def typeParams(tpe: Type, lookingFor: Symbol): TypeMap = {
+        def tpsFor(o: Symbol, s: Symbol): TypeMap = {
+          s.typeParams.map(s ⇒ (scala.Symbol(s.name.toString), s.tpe.asSeenFrom(tpe, o))).toMap
+        }
+        lookingFor.ownerChain.view.filter(_.typeParams.nonEmpty).foldLeft(Map[scala.Symbol, Type]())((s, e) ⇒ tpsFor(e, e) ++ s)
+      }
+      t match {
+        case s @ Select(o, _) ⇒ typeParams(o.tpe, s.symbol)
+        case i: Ident         ⇒ typeParams(i.tpe, i.symbol)
+        case _                ⇒ Map()
+      }
+    }
+
+    /** applies the type map to the PurityInfo, changing its purity accordingly */
+    def adjustPurityInfo(pi: PurityInfo, typeMap: TypeMap) = pi.purity match {
+      case ImpureDependingOn(ss) ⇒
+        val (skolems, concrete) = ss.map(typeMap.apply).partition(_.typeSymbol.isTypeParameterOrSkolem)
+        val np = {
+          if (concrete.find(tp ⇒ !SideEffectFreeType.isSideEffectFree(tp)).isDefined) AlwaysImpure
+          else if (skolems.nonEmpty) ImpureDependingOn(skolems.map(tp ⇒ scala.Symbol(tp.typeSymbol.name.toString)).toSet)
+          else AlwaysPure
+        }
+        pi.copy(purity = np)
+      case _ ⇒ pi
+    }
+
     /** all not 'always pure' calls inside a block of code */
     def impuresIn(tree: Tree): List[PurityInfo] = {
       val root = tree
@@ -199,9 +243,11 @@ trait PuscaDefinitions {
           case a @ Apply(fun, args) ⇒
             val nr = purityOf(fun.symbol) match {
               case AlwaysPure ⇒ Nil
-              case p          ⇒ PurityInfo(a.pos, p, descOf(fun.symbol)) :: Nil
+              case p ⇒
+                val pi = PurityInfo(a.pos, p, descOf(fun.symbol))
+                adjustPurityInfo(pi, resolveTypeParams(a)) :: Nil
             }
-            handleSeq(a.children, nr ::: soFar)
+            handleSeq(a.args, nr ::: soFar)
 
           case a @ Assign(s @ Select(_, _), _) if s.symbol.isModuleVar ⇒ //implementation detail of object (assigns a xxx$module var)
             soFar
@@ -220,9 +266,11 @@ trait PuscaDefinitions {
           case s @ Select(own, sel) ⇒
             val nr = purityOf(s.symbol) match {
               case AlwaysPure ⇒ Nil
-              case p          ⇒ PurityInfo(s.pos, p, descOf(s.symbol)) :: Nil
+              case p ⇒
+                val pi = PurityInfo(s.pos, p, descOf(s.symbol))
+                adjustPurityInfo(pi, methodOwnerTypeParams(s)) :: Nil
             }
-            handle(own, nr ::: soFar)
+            nr ::: soFar
 
           case i: Ident if i.symbol.isMutable && !i.symbol.ownerChain.contains(rootSymbol) ⇒ // read of var defined in an outer function
             PurityInfo(i.pos, AlwaysImpure, "access to non-local var " + i.name) :: soFar

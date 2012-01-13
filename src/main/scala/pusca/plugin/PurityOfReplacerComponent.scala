@@ -35,8 +35,13 @@ class PurityOfReplacerComponent(val global: Global) extends PluginComponent with
     def makePurityTree(purity: Purity, pos: Position) = {
       val t = purity match {
         case AlwaysPure   ⇒ Select(puscaInternalTree, "AlwaysPure")
+        case DeclaredPure ⇒ Select(puscaInternalTree, "DeclaredPure")
         case AlwaysImpure ⇒ Select(puscaInternalTree, "AlwaysImpure")
-        //TODO
+        case ImpureDependingOn(ss) ⇒
+          def makeSymbol(s: scala.Symbol) = Apply(Select(Ident("scala"), "Symbol"), Literal(s.name) :: Nil)
+          def makeSet(es: List[Tree]) = Apply(Select(Select(Select(Ident("scala"), "collection"), "immutable"), "Set"), es)
+          val items = ss.map(makeSymbol).toList
+          Apply(Select(puscaInternalTree, "ImpureDependingOn"), makeSet(items) :: Nil)
       }
       t.pos = pos
       localTyper.typed(t)
