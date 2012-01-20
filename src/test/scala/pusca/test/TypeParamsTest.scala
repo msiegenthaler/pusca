@@ -166,4 +166,61 @@ class TypeParamsTest extends JUnitSuite with ShouldMatchersForJUnit {
         """) should compileAndRun
   }
 
+  @Test def sideEffectFreeExtendViaTypeAndTrait {
+    code("""
+        trait Fun[I,O] {
+          def apply(in: I): O
+        }
+        type PureFun[I,O] = Fun[I,O @sideEffectFree]
+        trait LenFun extends PureFun[String,Int]
+        object LenFunImpl extends LenFun {
+          override def apply(s: String) = s.length
+        }
+        val lf = LenFunImpl
+        assertPure(purityOf(lf("Test")))
+        """) should compileAndRun
+  }
+  @Test def sideEffectFreeExtendViaTypeAndTraitAsLenFun {
+    code("""
+        trait Fun[I,O] {
+          def apply(in: I): O
+        }
+        type PureFun[I,O] = Fun[I,O @sideEffectFree]
+        trait LenFun extends PureFun[String,Int]
+        object LenFunImpl extends LenFun {
+          override def apply(s: String) = s.length
+        }
+        val lf: LenFun = LenFunImpl
+        assertPure(purityOf(lf("Test")))
+        """) should compileAndRun
+  }
+  @Test def sideEffectFreeExtendViaTypeAndTraitAsPureFun {
+    code("""
+        trait Fun[I,O] {
+          def apply(in: I): O
+        }
+        type PureFun[I,O] = Fun[I,O @sideEffectFree]
+        trait LenFun extends PureFun[String,Int]
+        object LenFunImpl extends LenFun {
+          override def apply(s: String) = s.length
+        }
+        val lf: PureFun[String,Int] = LenFunImpl
+        assertPure(purityOf(lf("Test")))
+        """) should compileAndRun
+  }
+  @Test def sideEffectFreeExtendViaTypeAndTraitAsFun {
+    code("""
+        trait Fun[I,O] {
+          def apply(in: I): O
+        }
+        type PureFun[I,O] = Fun[I,O @sideEffectFree]
+        trait LenFun extends PureFun[String,Int]
+        object LenFunImpl extends LenFun {
+          override def apply(s: String) = s.length
+        }
+        val lf: Fun[String,Int] = LenFunImpl
+        assertImpure(purityOf(lf("Test")))
+        """) should compileAndRun
+  }
+
 }
