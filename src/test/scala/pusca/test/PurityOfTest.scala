@@ -51,18 +51,29 @@ class PurityOfTest extends JUnitSuite with ShouldMatchersForJUnit {
         assertImpure(purityOf(im(2)))""") should compileAndRun
   }
 
-  //TODO make literals sideEffectFree
-  @Test def purityOfParametrizedToStringIsAlwaysImpure {
+  @Test def purityOfMethodReturningIntWithoutAnnotIsAlwaysPure {
     code("""
-        def d[A](in: A): A = in
-        assertImpure(purityOf(d("Hi")))""") should compileAndRun
+        def length(s: String): Int = 10
+        assertPure(purityOf(length("Hello")))""") should compileAndRun
   }
-  //TODO make literals sideEffectFree
-  @Test def purityOfParametrizedToIntIsAlwaysImpure {
+
+  @Test def purityOfMethodReturningIntInferedWithoutAnnotIsAlwaysPure {
     code("""
-        def d[A](in: A): A = in
-        assertImpure(purityOf(d(10)))""") should compileAndRun
+        def length(s: String) = 10
+        assertPure(purityOf(length("Hello")))""") should compileAndRun
   }
+
+  //TODO should be pure
+  //  @Test def purityOfParametrizedToStringIsAlwaysImpure {
+  //    code("""
+  //          def d[A](in: A): A = in
+  //          assertPure(purityOf(d("Hi")))""") should compileAndRun
+  //  }
+  //  @Test def purityOfParametrizedToIntIsAlwaysImpure {
+  //    code("""
+  //          def d[A](in: A): A = in
+  //          assertPure(purityOf(d(10)))""") should compileAndRun
+  //  }
 
   @Test def purityOfParametrizedToSefStringIsAlwaysPure {
     code("""

@@ -43,6 +43,35 @@ trait PuscaDefinitions {
     def isSideEffectFree(tpe: Type) = tpe.hasAnnotation(Annotation.sideEffectFree) || tpe.dealias.hasAnnotation(Annotation.sideEffectFree)
   }
 
+  object Utils {
+    /**
+     * The return type of the method.
+     *  i.e. for "def a(i: Int): String" it returns String
+     */
+    @tailrec def returnTypeOf(methodType: Type): Type = methodType match {
+      case PolyType(_, rt)      ⇒ returnTypeOf(rt)
+      case MethodType(_, r)     ⇒ r
+      case NullaryMethodType(r) ⇒ r
+      case t                    ⇒ t
+    }
+    /** Return type of the method. See returnTypeOf(Type). */
+    def returnTypeOf(t: MethodSymbol): Type = returnTypeOf(t.tpe)
+
+    /** Changes the purity annotation on the given method */
+    def changePurityAnnotation(to: Symbol)(on: DefDef) {
+      on.tpe = tpeWithPurityAnnotation(to)(on.tpe)
+      setPurityAnnotationOnSymbol(to)(on.symbol)
+    }
+    private def setPurityAnnotationOnSymbol(to: Symbol)(on: Symbol) {
+      val na = Annotation(to) :: on.annotations.filterNot(Annotation.allForMethod.contains)
+      on.setAnnotations(na)
+    }
+    private def tpeWithPurityAnnotation(to: Symbol)(on: Type) = {
+      val na = Annotation(to) :: on.annotations.filterNot(Annotation.allForMethod.contains)
+      on.withAnnotations(na)
+    }
+  }
+
   /** Usage: <code>MethodPurity.of(myMethod)</code> */
   object MethodPurity {
     /**
@@ -65,7 +94,7 @@ trait PuscaDefinitions {
         }
         ImpureDependingOn(impureIfs.map(scala.Symbol(_)).toSet)
       case s if s.hasAnnotation(Annotation.impureIfReturnType) ⇒
-        val rt = returnTypeOf(s)
+        val rt = Utils.returnTypeOf(s)
         rt match {
           case SideEffectFreeType(_)                     ⇒ AlwaysPure
           case t if t.typeSymbol.isTypeParameterOrSkolem ⇒ ImpureDependingOn(Set(scala.Symbol(rt.typeSymbol.name.toString)))
@@ -98,14 +127,6 @@ trait PuscaDefinitions {
           Some(arg.stringValue.intern)
         case _ ⇒ None
       }
-    }
-    private[this] def returnTypeOf(t: MethodSymbol): Type = {
-      def resTpe(t: Type): Type = t match {
-        case PolyType(_, rt)      ⇒ resTpe(rt)
-        case MethodType(_, r)     ⇒ r
-        case NullaryMethodType(r) ⇒ r
-      }
-      resTpe(t.tpe)
     }
 
     val puscaConf = "pusca.conf"

@@ -13,7 +13,7 @@ import Internal._
 class PurityOfReplacerComponent(val global: Global) extends PluginComponent with PuscaDefinitions with Transform with TypingTransformers {
   import global._
 
-  override val runsAfter = List("typer")
+  override val runsAfter = List("typer", "narrowPurity")
   override val runsBefore = List("tailcalls", "uncurry")
   val phaseName = "purityOfReplacer"
   def newTransformer(unit: CompilationUnit) = new PurityOfReplacer(unit)
