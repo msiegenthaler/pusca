@@ -24,8 +24,9 @@ class TypeParamsTest extends JUnitSuite with ShouldMatchersForJUnit {
         }
         val lf = new LenFun
         assertPure(purityOf(lf.apply("Test")))
-        """) should compile
+        """) should compileAndRun
   }
+
   @Test def sideEffectFreeExtendViaType {
     code("""
         trait Fun[I,O] {
@@ -37,8 +38,9 @@ class TypeParamsTest extends JUnitSuite with ShouldMatchersForJUnit {
         }
         val lf = new LenFun
         assertPure(purityOf(lf.apply("Test")))
-        """) should compile
+        """) should compileAndRun
   }
+
   @Test def sideEffectFreeExtendOfNormalWithSugaredApply {
     code("""
         trait Fun[I,O] {
@@ -49,8 +51,9 @@ class TypeParamsTest extends JUnitSuite with ShouldMatchersForJUnit {
         }
         val lf = new LenFun
         assertPure(purityOf(lf("Test")))
-        """) should compile
+        """) should compileAndRun
   }
+
   @Test def sideEffectFreeExtendOfNormalObject {
     code("""
         trait Fun[I,O] {
@@ -60,7 +63,7 @@ class TypeParamsTest extends JUnitSuite with ShouldMatchersForJUnit {
           override def apply(s: String) = s.length
         }
         assertPure(purityOf(LenFun("Test")))
-        """) should compile
+        """) should compileAndRun
   }
 
   @Test def sideEffectFreeExtendOfNormalCastedToGenericShouldBeImpure {
@@ -73,7 +76,7 @@ class TypeParamsTest extends JUnitSuite with ShouldMatchersForJUnit {
         }
         val f: Fun[String, Int] = LenFun
         assertImpure(purityOf(f("Test")))
-        """) should compile
+        """) should compileAndRun
   }
 
   @Test def sideEffectFreeExtendViaTypeCastedToFunShouldBeImpure {
@@ -87,8 +90,9 @@ class TypeParamsTest extends JUnitSuite with ShouldMatchersForJUnit {
         }
         val lf: Fun[String,Int] = new LenFun
         assertImpure(purityOf(lf.apply("Test")))
-        """) should compile
+        """) should compileAndRun
   }
+
   @Test def sideEffectFreeExtendViaTypeCastedToPureFunShouldBePure {
     code("""
         trait Fun[I,O] {
@@ -100,7 +104,66 @@ class TypeParamsTest extends JUnitSuite with ShouldMatchersForJUnit {
         }
         val lf: PureFun[String,Int] = new LenFun
         assertPure(purityOf(lf.apply("Test")))
-        """) should compile
+        """) should compileAndRun
+  }
+
+  @Test def sideEffectFreeExtendViaTwoType {
+    code("""
+        trait Fun[I,O] {
+          def apply(in: I): O
+        }
+        type PureFun[I,O] = Fun[I,O @sideEffectFree]
+        type LenFun = PureFun[String,Int]
+        object LenFunImpl extends LenFun {
+          override def apply(s: String) = s.length
+        }
+        val lf = LenFunImpl
+        assertPure(purityOf(lf("Test")))
+        """) should compileAndRun
+  }
+  @Test def sideEffectFreeExtendViaTwoTypeAsLenFun {
+    code("""
+        trait Fun[I,O] {
+          def apply(in: I): O
+        }
+        type PureFun[I,O] = Fun[I,O @sideEffectFree]
+        type LenFun = PureFun[String,Int]
+        object LenFunImpl extends LenFun {
+          override def apply(s: String) = s.length
+        }
+        val lf: LenFun = LenFunImpl
+        assertPure(purityOf(lf("Test")))
+        """) should compileAndRun
+  }
+
+  @Test def sideEffectFreeExtendViaTwoTypeAsFunShouldBeImpure {
+    code("""
+        trait Fun[I,O] {
+          def apply(in: I): O
+        }
+        type PureFun[I,O] = Fun[I,O @sideEffectFree]
+        type LenFun = PureFun[String,Int]
+        object LenFunImpl extends LenFun {
+          override def apply(s: String) = s.length
+        }
+        val lf: Fun[String,Int] = LenFunImpl
+        assertImpure(purityOf(lf("Test")))
+        """) should compileAndRun
+  }
+  @Test def sideEffectFreeExtendViaTwoTypeAsFunSubtypeShouldBeImpure {
+    code("""
+        trait Fun[I,O] {
+          def apply(in: I): O
+        }
+        type GenLenFun = Fun[String,Int]
+        type PureFun[I,O] = Fun[I,O @sideEffectFree]
+        type LenFun = PureFun[String,Int]
+        object LenFunImpl extends LenFun {
+          override def apply(s: String) = s.length
+        }
+        val lf: GenLenFun = LenFunImpl
+        assertImpure(purityOf(lf("Test")))
+        """) should compileAndRun
   }
 
 }
