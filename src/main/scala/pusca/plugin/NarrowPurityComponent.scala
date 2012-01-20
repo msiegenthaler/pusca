@@ -22,20 +22,30 @@ class NarrowPurityComponent(val global: Global) extends PluginComponent with Pus
 
   class NarrowPurity extends Transformer {
     private def resolveOverridenType(implementor: Symbol)(baseMethod: Symbol) = implementor.tpe.memberInfo(baseMethod)
-    def hasSideEffectFreeReturn(method: Symbol): Boolean = {
-      def extendsWithSefParam = method.extendedOverriddenSymbols.view.map(resolveOverridenType(method.owner)).map(returnTypeOf).
-        filter(SideEffectFreeType.isSideEffectFree).nonEmpty
-      def concrete = !returnTypeOf(method.tpe).typeSymbol.isTypeParameterOrSkolem
-      concrete || extendsWithSefParam
-    }
+    def extendsSefReturn(method: Symbol) = method.extendedOverriddenSymbols.view.map(resolveOverridenType(method.owner)).map(returnTypeOf).
+      filter(SideEffectFreeType.isSideEffectFree).nonEmpty
+    def concreteReturn(method: Symbol) = !returnTypeOf(method.tpe).typeSymbol.isTypeParameterOrSkolem
 
     override def transform(tree: Tree): Tree = {
       tree match {
         case d: DefDef ⇒ d match {
-          case PurityDecl.impureIfReturnType(s, _) ⇒
-            if (hasSideEffectFreeReturn(s)) changePurityAnnotation(PurityDecl.pure.annotation)(d)
-          case _ ⇒ ()
+          //if a method returns a concrete value (= not a skolem or type param) it is pure if not specified otherwise
+          case PurityDecl.impureIfReturnType(s, _) if concreteReturn(s) || extendsSefReturn(s) ⇒
+            changePurityAnnotation(PurityDecl.pure.annotation)(d)
+
+          // if at least one of the super-defs has the @sideEffectFree on the return type then this def must be pure
+          case PurityDecl.impureIfReturnType(s, _) if extendsSefReturn(s) ⇒
+            changePurityAnnotation(PurityDecl.pure.annotation)(d)
+
+          // if at least one of the super-defs has the @sideEffectFree on the return type then this def cannot be impure
+          case PurityDecl.impure(s) if extendsSefReturn(s) ⇒
+            reporter.error(d.pos, "The method " + s.name + " cannot be impure, its return type is parametrized to be side-effect free")
+
+          //TODO handle impureIf
+
+          case _ ⇒ () //don't change anything otherwise
         }
+
         //TODO constructors (resp. ClassDef)
 
         case other ⇒ ()

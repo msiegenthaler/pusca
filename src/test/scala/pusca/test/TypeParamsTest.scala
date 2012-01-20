@@ -259,4 +259,14 @@ class TypeParamsTest extends JUnitSuite with ShouldMatchersForJUnit {
         """) should compileAndRun
   }
 
+  @Test def pureFunMustNotHaveImpureApply {
+    code("""
+        trait Fun[I,O] { def apply(in: I): O }
+        type PureFun[I,O] = Fun[I,O @sideEffectFree]
+        class LenFun extends PureFun[String, Int] {
+          @impure override def apply(s: String) = s.length
+        }
+        """) should yieldCompileError("The method apply cannot be impure")
+  }
+
 }
