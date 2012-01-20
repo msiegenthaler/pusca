@@ -223,4 +223,40 @@ class TypeParamsTest extends JUnitSuite with ShouldMatchersForJUnit {
         """) should compileAndRun
   }
 
+  //TODO Type inference does not yet handle annotations correctly
+  //  @Test def typeParamFunExecutionWithPureFun {
+  //    code("""
+  //        trait Fun[I,O] { def apply(in: I): O }
+  //        class FunExec[I,O](fun: Fun[I,O], in: I) { @impureIf('O) def exec = fun(in) }
+  //        type PureFun[I,O] = Fun[I,O @sideEffectFree]
+  //        object LenFun extends PureFun[String,Int] { override def apply(in: String) = in.length }
+  //
+  //        val fb = new FunExec(LenFun, "Test")
+  //        assertPure(purityOf(fb.exec))
+  //        """) should compileAndRun
+  //  }
+  @Test def typeParamFunExecutionWithPureFunAndExplicitParams {
+    code("""
+        trait Fun[I,O] { def apply(in: I): O }
+        class FunExec[I,O](fun: Fun[I,O], in: I) { @impureIf('O) def exec = fun(in) }
+        type PureFun[I,O] = Fun[I,O @sideEffectFree]
+        object LenFun extends PureFun[String,Int] { override def apply(in: String) = in.length }
+
+        val fb = new FunExec[String,Int @sideEffectFree](LenFun, "Test")
+        assertPure(purityOf(fb.exec))
+        """) should compileAndRun
+  }
+
+  @Test def typeParamFunExecutionWithImpureFun {
+    code("""
+        trait Fun[I,O] { def apply(in: I): O }
+        class FunExec[I,O](fun: Fun[I,O], in: I) { @impureIf('O) def exec = fun(in) }
+        type PureFun[I,O] = Fun[I,O @sideEffectFree]
+        object LenFun extends Fun[String,Int] { @impure override def apply(in: String) = in.length }
+
+        val fb = new FunExec(LenFun, "Test")
+        assertImpure(purityOf(fb.exec))
+        """) should compileAndRun
+  }
+
 }
