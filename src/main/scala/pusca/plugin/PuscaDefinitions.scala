@@ -44,7 +44,7 @@ trait PuscaDefinitions {
     }
     /** pusca.impure Annotation */
     object impure extends NoArgDecl {
-      override val annotation = definitions.getClass("pusca.pure")
+      override val annotation = definitions.getClass("pusca.impure")
     }
     /** pusca.impureIfReturnType Annotation */
     object impureIfReturnType extends Decl {
