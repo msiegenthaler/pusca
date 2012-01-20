@@ -14,24 +14,73 @@ trait PuscaDefinitions {
   protected object Annotation {
     def apply(annotation: Symbol): AnnotationInfo = AnnotationInfo(annotation.tpe, Nil, Nil)
 
-    val pure = definitions.getClass("pusca.pure")
-    val impure = definitions.getClass("pusca.impure")
-    val impureIf = definitions.getClass("pusca.impureIf")
-    val impureIfReturnType = definitions.getClass("pusca.impureIfReturnType")
-    val declarePure = definitions.getClass("pusca.declarePure")
-    val allForMethod = pure :: impure :: impureIf :: impureIfReturnType :: declarePure :: Nil
-
     val sideEffectFree = definitions.getClass("pusca.sideEffectFree")
     val allForTypes = sideEffectFree :: Nil
-
-    //TODO
-    //    val returnedInfere = definitions.getClass("pusca.Internal.returnedInfere")
-    //    val internalForTypes = returnedInfere :: Nil
   }
   protected object PuscaMethods {
     lazy val puscaPackage = definitions.getModule("pusca")
     lazy val puscaInternalObject = definitions.getMember(puscaPackage, "Internal")
     lazy val purityOfMethod = definitions.getMember(puscaInternalObject, "purityOf")
+  }
+
+  protected object PurityDecl {
+    trait Decl {
+      def annotatesSymbol(s: Symbol) = s.hasAnnotation(annotation)
+      def annotatesMethod(d: DefDef) = annotatesSymbol(d.symbol)
+      def annotation: Symbol
+    }
+    trait NoArgDecl extends Decl {
+      def unapply(d: DefDef): Option[Symbol] = unapply(d.symbol)
+      def unapply(s: Symbol) = if (annotatesSymbol(s)) Some(s) else None
+    }
+
+    /** pusca.pure Annotation */
+    object pure extends NoArgDecl {
+      override val annotation = definitions.getClass("pusca.pure")
+    }
+    /** pusca.declarePure Annotation */
+    object declarePure extends NoArgDecl {
+      override val annotation = definitions.getClass("pusca.declarePure")
+    }
+    /** pusca.impure Annotation */
+    object impure extends NoArgDecl {
+      override val annotation = definitions.getClass("pusca.pure")
+    }
+    /** pusca.impureIfReturnType Annotation */
+    object impureIfReturnType extends Decl {
+      override val annotation = definitions.getClass("pusca.impureIfReturnType")
+
+      def unapply(d: DefDef): Option[(Symbol, Type)] = unapply(d.symbol)
+      def unapply(method: Symbol) = {
+        if (annotatesSymbol(method)) Some(method, Utils.returnTypeOf(method.tpe))
+        else None
+      }
+    }
+    /** pusca.impureIf Annotation */
+    object impureIf extends Decl {
+      private[this] object SymbolApply {
+        private val applyName = stringToTermName("apply")
+        private val symbolName = stringToTermName("Symbol")
+        private val scalaName = stringToTermName("scala")
+        def unapply(t: Tree) = t match {
+          case Apply(Select(Select(Ident(scalaName), symbolName), applyName), Literal(arg @ Constant(_)) :: Nil) if arg.tag == StringTag ⇒
+            Some(arg.stringValue.intern)
+          case _ ⇒ None
+        }
+      }
+
+      def unapply(d: DefDef): Option[(Symbol, Set[scala.Symbol])] = unapply(d.symbol)
+      def unapply(method: Symbol) = method.annotations.find(_.atp.typeSymbol == annotation) match {
+        case Some(AnnotationInfo(_, args, _)) ⇒ Some(method, args.collect { case SymbolApply(arg) ⇒ arg }.map(scala.Symbol.apply).toSet)
+        case None                             ⇒ None
+      }
+      override val annotation = definitions.getClass("pusca.impureIf")
+    }
+
+    /** all purity declarations */
+    val all = pure :: declarePure :: impure :: impureIfReturnType :: impureIf :: Nil
+    /** all purity annotations */
+    val annotations = all.map(_.annotation)
   }
 
   /** A type that does not allow a side effect */
@@ -63,11 +112,11 @@ trait PuscaDefinitions {
       setPurityAnnotationOnSymbol(to)(on.symbol)
     }
     private def setPurityAnnotationOnSymbol(to: Symbol)(on: Symbol) {
-      val na = Annotation(to) :: on.annotations.filterNot(Annotation.allForMethod.contains)
+      val na = Annotation(to) :: on.annotations.filterNot(PurityDecl.annotations.contains)
       on.setAnnotations(na)
     }
     private def tpeWithPurityAnnotation(to: Symbol)(on: Type) = {
-      val na = Annotation(to) :: on.annotations.filterNot(Annotation.allForMethod.contains)
+      val na = Annotation(to) :: on.annotations.filterNot(PurityDecl.annotations.contains)
       on.withAnnotations(na)
     }
   }
@@ -84,22 +133,15 @@ trait PuscaDefinitions {
 
     /** Handler for pusca-compiled code */
     private val puscaHandler: PartialFunction[MethodSymbol, Purity] = {
-      case s if s.hasAnnotation(Annotation.pure)        ⇒ AlwaysPure
-      case s if s.hasAnnotation(Annotation.declarePure) ⇒ AlwaysPure
-      case s if s.hasAnnotation(Annotation.impure)      ⇒ AlwaysImpure
-      case s if s.hasAnnotation(Annotation.impureIf) ⇒
-        val impureIfs = s.annotations.find(_.atp.typeSymbol == Annotation.impureIf) match {
-          case Some(AnnotationInfo(_, args, _)) ⇒ args.collect { case SymbolApply(arg) ⇒ arg }
-          case None                             ⇒ Nil
-        }
-        ImpureDependingOn(impureIfs.map(scala.Symbol(_)).toSet)
-      case s if s.hasAnnotation(Annotation.impureIfReturnType) ⇒
-        val rt = Utils.returnTypeOf(s)
-        rt match {
-          case SideEffectFreeType(_)                     ⇒ AlwaysPure
-          case t if t.typeSymbol.isTypeParameterOrSkolem ⇒ ImpureDependingOn(Set(scala.Symbol(rt.typeSymbol.name.toString)))
-          case _                                         ⇒ AlwaysImpure
-        }
+      case PurityDecl.pure(_)            ⇒ AlwaysPure
+      case PurityDecl.declarePure(_)     ⇒ AlwaysPure
+      case PurityDecl.impure(_)          ⇒ AlwaysImpure
+      case PurityDecl.impureIf(_, conds) ⇒ ImpureDependingOn(conds)
+      case PurityDecl.impureIfReturnType(_, rt) ⇒ rt match {
+        case SideEffectFreeType(_)                     ⇒ AlwaysPure
+        case t if t.typeSymbol.isTypeParameterOrSkolem ⇒ ImpureDependingOn(Set(scala.Symbol(rt.typeSymbol.name.toString)))
+        case _                                         ⇒ AlwaysImpure
+      }
     }
     /** Handler for code that was not compiled by pusca */
     private lazy val legacyHandler: PartialFunction[MethodSymbol, Purity] = {
@@ -116,17 +158,6 @@ trait PuscaDefinitions {
     /** Handler that considers everything as impure */
     private val impureHandler: PartialFunction[MethodSymbol, Purity] = {
       case _ ⇒ AlwaysImpure
-    }
-
-    private[this] object SymbolApply {
-      private val applyName = stringToTermName("apply")
-      private val symbolName = stringToTermName("Symbol")
-      private val scalaName = stringToTermName("scala")
-      def unapply(t: Tree) = t match {
-        case Apply(Select(Select(Ident(scalaName), symbolName), applyName), Literal(arg @ Constant(_)) :: Nil) if arg.tag == StringTag ⇒
-          Some(arg.stringValue.intern)
-        case _ ⇒ None
-      }
     }
 
     val puscaConf = "pusca.conf"

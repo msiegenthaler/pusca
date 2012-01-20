@@ -28,22 +28,19 @@ class NarrowPurityComponent(val global: Global) extends PluginComponent with Pus
       def concrete = !returnTypeOf(method.tpe).typeSymbol.isTypeParameterOrSkolem
       concrete || extendsWithSefParam
     }
-    def hasSideEffectFreeReturn(d: DefDef): Boolean = hasSideEffectFreeReturn(d.symbol)
 
     override def transform(tree: Tree): Tree = {
-      val nt = tree match {
-        case d: DefDef if d.symbol.hasAnnotation(Annotation.impureIfReturnType) ⇒
-          if (hasSideEffectFreeReturn(d)) changePurityAnnotation(Annotation.pure)(d)
-          d
-
-        case d: DefDef ⇒
-          d
-
+      tree match {
+        case d: DefDef ⇒ d match {
+          case PurityDecl.impureIfReturnType(s, _) ⇒
+            if (hasSideEffectFreeReturn(s)) changePurityAnnotation(PurityDecl.pure.annotation)(d)
+          case _ ⇒ ()
+        }
         //TODO constructors (resp. ClassDef)
 
-        case other ⇒ other
+        case other ⇒ ()
       }
-      super.transform(nt)
+      super.transform(tree)
     }
   }
 }

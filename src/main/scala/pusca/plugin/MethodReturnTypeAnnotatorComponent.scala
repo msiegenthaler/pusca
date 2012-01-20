@@ -24,7 +24,7 @@ class MethodReturnTypeAnnotatorComponent(val global: Global) extends PluginCompo
       // (will get replaced with @pure in a later stage if the return type is not a skolem or type parameter)
       //TODO document which stage as soon as it is implemented.
       case d: DefDef if !hasPuscaMethodAnnotation(d) ⇒
-        val nmods = d.mods.withAnnotations(makeAnnotation(Annotation.impureIfReturnType) :: d.mods.annotations)
+        val nmods = d.mods.withAnnotations(makeAnnotation(PurityDecl.impureIfReturnType.annotation) :: d.mods.annotations)
         val ndef = treeCopy.DefDef(d, nmods, d.name, d.tparams, d.vparamss, d.tpt, d.rhs)
         transform(ndef) //process again
 

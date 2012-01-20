@@ -23,8 +23,8 @@ private[plugin] trait ParserStageSupport extends PuscaDefinitions {
     case Annotated(a, t) ⇒ hasAnnotation(t, annot)
     case _ ⇒ false
   }
-  protected def hasPuscaMethodAnnotation(d: DefDef) = findAnnotation(Annotation.allForMethod, d.mods.annotations).isDefined
-  protected def hasPuscaMethodAnnotation(c: ClassDef) = findAnnotation(Annotation.allForMethod, c.mods.annotations).isDefined
+  protected def hasPuscaMethodAnnotation(d: DefDef) = findAnnotation(PurityDecl.annotations, d.mods.annotations).isDefined
+  protected def hasPuscaMethodAnnotation(c: ClassDef) = findAnnotation(PurityDecl.annotations, c.mods.annotations).isDefined
 
   protected def makeAnnotation(annot: Symbol): Tree = {
     Apply(Select(New(Select(Ident("pusca"), annot.name)), mkTermName("<init>")), Nil)
